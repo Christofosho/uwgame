@@ -1,34 +1,38 @@
 function InputManager() {
 
+  /* The inputEvent objects are in the form of {INPUT : FUNCTION()}
+     When the specified input is pressed (or depressed) the function will be run
+     These objects should be set by the game manager
+  */
   this.inputEventPress = {};
   this.inputEventDepress = {};
 
   // Initialise the input state object
   this.inputStates = {};
-  for ( i in INPUT ) {
-    this.inputStates[INPUT[i]] = { pressed: false };
+  for (i in INPUT) {
+    this.inputStates[INPUT[i]] = {pressed: false};
   }
 
   // Key up and down listening events
-  $( document ).keydown( $.proxy( this.keyDownFunction, this ) );
-  $( document ).keyup( $.proxy( this.keyUpFunction, this ) );
+  $(document).keydown($.proxy(this.keyDownFunction, this));
+  $(document).keyup($.proxy(this.keyUpFunction, this));
 }
 
-InputManager.prototype.keyDownFunction = function ( event ) {
+InputManager.prototype.keyDownFunction = function(event) {
   var input = this.keyboardMap[event.which];
-  if( input ) {
+  if (input) {
     this.inputStates[input].pressed = true;
-    if( this.inputEventPress[input] ) {
+    if (this.inputEventPress[input]) {
       (this.inputEventPress[input])();
     }
   }
 };
 
-InputManager.prototype.keyUpFunction = function ( event ) {
+InputManager.prototype.keyUpFunction = function(event) {
   var input = this.keyboardMap[event.which];
-  if( input ) {
+  if (input) {
     this.inputStates[input].pressed = false;
-    if( this.inputEventDepress[input] ) {
+    if (this.inputEventDepress[input]) {
       (this.inputEventDepress[input])();
     }
   }

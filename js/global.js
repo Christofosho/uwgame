@@ -1,5 +1,5 @@
-/* Note: Do not use the string itself as an index.
-         eg: use INPUT.UP instead of "up"
+/* NOTE: Do not use the string itself as an index.
+     eg: use INPUT.UP instead of "up"
 */
 
 var DIRECTION = {
