@@ -1,6 +1,7 @@
 function InputManager() {
   this.keyDownFunction( { which: 20 } );
   $( document ).keydown( $.proxy( this.keyDownFunction, this ) );
+  $( document ).keyup( $.proxy( this.keyUpFunction, this ) );
 }
 
 /* Keyboard Events:
@@ -17,10 +18,29 @@ InputManager.prototype.keyboardEvents = {
   40 : textChangeFun( "#inputTest", "down" )
 };
 
+/* Keyboard Map:
+   (TODO explain)
+*/
+InputManager.prototype.keyboardMap = {
+  // TODO: map properly
+  // Escape
+  27 : 0,
+  // Directions
+  37 : 1,
+  38 : 2,
+  39 : 3,
+  40 : 4
+};
+
 InputManager.prototype.keyDownFunction = function ( event ) {
+  console.log( "Down " + event.which );
   if( this.keyboardEvents[event.which] ) {
     (this.keyboardEvents[event.which])();
   }
+};
+
+InputManager.prototype.keyUpFunction = function ( event ) {
+  console.log( "Up " + event.which );
 };
 
 // Just used to test out things for the moment...
@@ -29,3 +49,5 @@ function textChangeFun ( id, text ) {
 }
 
 var input = new InputManager();
+
+
