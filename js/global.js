@@ -1,16 +1,20 @@
+/* Note: Do not use the string itself as an index.
+         eg: use INPUT.UP instead of "up"
+*/
+
 var DIRECTION = {
-  UP: 0,
-  RIGHT: 1,
-  DOWN: 2,
-  LEFT: 3
+  UP: "up",
+  RIGHT: "right",
+  DOWN: "down",
+  LEFT: "left"
 };
 
 var INPUT = {
-  UP: 0,
-  RIGHT: 1,
-  DOWN: 2,
-  LEFT: 3,
-  ACTION: 4,
-  BACK: 5,
-  MENU: 6
+  UP: "up",
+  RIGHT: "right",
+  DOWN: "down",
+  LEFT: "left",
+  ACTION: "action",
+  BACK: "back",
+  MENU: "menu"
 };

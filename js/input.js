@@ -1,53 +1,65 @@
 function InputManager() {
-  this.keyDownFunction( { which: 20 } );
+
+  this.inputEventPress = {};
+  this.inputEventDepress = {};
+
+  // Initialise the input state object
+  this.inputStates = {};
+  for ( i in INPUT ) {
+    this.inputStates[INPUT[i]] = { pressed: false };
+  }
+
+  // Key up and down listening events
   $( document ).keydown( $.proxy( this.keyDownFunction, this ) );
   $( document ).keyup( $.proxy( this.keyUpFunction, this ) );
 }
 
-/* Keyboard Events:
-   defines a list of events, based on the keyCode / charCode
-   When a key event is detected, this list is checked for an event for that key
-*/
-InputManager.prototype.keyboardEvents = {
-  // Escape (menu?)
-  27 : textChangeFun( "#inputTest", "Esc" ),
-  // Directions
-  37 : textChangeFun( "#inputTest", "left" ),
-  38 : textChangeFun( "#inputTest", "up" ),
-  39 : textChangeFun( "#inputTest", "right" ),
-  40 : textChangeFun( "#inputTest", "down" )
-};
-
-/* Keyboard Map:
-   (TODO explain)
-*/
-InputManager.prototype.keyboardMap = {
-  // TODO: map properly
-  // Escape
-  27 : 0,
-  // Directions
-  37 : 1,
-  38 : 2,
-  39 : 3,
-  40 : 4
-};
-
 InputManager.prototype.keyDownFunction = function ( event ) {
-  console.log( "Down " + event.which );
-  if( this.keyboardEvents[event.which] ) {
-    (this.keyboardEvents[event.which])();
+  var input = this.keyboardMap[event.which];
+  if( input ) {
+    this.inputStates[input].pressed = true;
+    if( this.inputEventPress[input] ) {
+      (this.inputEventPress[input])();
+    }
   }
 };
 
 InputManager.prototype.keyUpFunction = function ( event ) {
-  console.log( "Up " + event.which );
+  var input = this.keyboardMap[event.which];
+  if( input ) {
+    this.inputStates[input].pressed = false;
+    if( this.inputEventDepress[input] ) {
+      (this.inputEventDepress[input])();
+    }
+  }
 };
 
-// Just used to test out things for the moment...
-function textChangeFun ( id, text ) {
-  return function() { $(id).text( text ) };
-}
+/* Keyboard Map:
+   Map the keyboard inputs (from event.which) to the INPUT
+*/
+InputManager.prototype.keyboardMap = {
+  // Escape, Q (Back)
+  27 : INPUT.BACK,
+  81 : INPUT.BACK,
 
-var input = new InputManager();
+  // Arrow keys
+  37 : INPUT.LEFT,
+  38 : INPUT.UP,
+  39 : INPUT.RIGHT,
+  40 : INPUT.DOWN,
 
+  // WASD
+  65 : INPUT.LEFT,
+  87 : INPUT.UP,
+  68 : INPUT.RIGHT,
+  83 : INPUT.DOWN,
 
+  // E, Enter (Action)
+  69 : INPUT.ACTION,
+  13 : INPUT.ACTION,
+
+  // M (Menu)
+  77 : INPUT.MENU
+};
+
+var inputManager = new InputManager(); 
