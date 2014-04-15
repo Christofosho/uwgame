@@ -5,7 +5,7 @@ function InputManager() {
      These objects should be set by the game manager
   */
   this.inputEventPress = {};
-  this.inputEventDepress = {};
+  this.inputEventUnpress = {};
 
   // Initialise the input state object
   this.inputStates = {};
@@ -21,6 +21,7 @@ function InputManager() {
 InputManager.prototype.keyDownFunction = function(event) {
   var input = this.keyboardMap[event.which];
   if (input) {
+    event.preventDefault();
     this.inputStates[input].pressed = true;
     if (this.inputEventPress[input]) {
       (this.inputEventPress[input])();
@@ -31,9 +32,10 @@ InputManager.prototype.keyDownFunction = function(event) {
 InputManager.prototype.keyUpFunction = function(event) {
   var input = this.keyboardMap[event.which];
   if (input) {
+    event.preventDefault();
     this.inputStates[input].pressed = false;
-    if (this.inputEventDepress[input]) {
-      (this.inputEventDepress[input])();
+    if (this.inputEventUnpress[input]) {
+      (this.inputEventUnpress[input])();
     }
   }
 };
@@ -65,5 +67,3 @@ InputManager.prototype.keyboardMap = {
   // M (Menu)
   77 : INPUT.MENU
 };
-
-var inputManager = new InputManager(); 

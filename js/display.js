@@ -17,6 +17,8 @@
 */
 function DisplayManager() {
 
+  this.eventListeners[DisplayManager.MOVE_COMPLETE] = [];
+
   this.stage = new Kinetic.Stage({
     container: 'game',
     width: this.width,
@@ -41,7 +43,8 @@ function DisplayManager() {
   for (var i = 0; i < this.backgroundImages.length; i++) {
     this.backgroundImages[i] = new Array(this.num_chunks_x);
   }
-  this.background = new Kinetic.Group();
+  this.background = new Kinetic.Group({ x: 0, y: 0 });
+  this.backgroundLayer.add(this.background);
 
   var center = this.getCenterTile();
   this.player = this.loadImage({
@@ -61,6 +64,9 @@ function DisplayManager() {
 
   this.loadBg();
 }
+
+DisplayManager.MOVE_COMPLETE = "move_complete";
+
 DisplayManager.prototype = {
   // Width of the stage
   width: 800,
@@ -72,19 +78,46 @@ DisplayManager.prototype = {
   view: { x: 0, y: 0, width: null, height: null },
 
   // The total size of the game, in map coordinates (# of tiles)
-  gameSize: { width: 395, height: 235 },
+  gameSize: { width: 297, height: 147 },
 
   // Tile size
-  tileSize: { width: 20, height: 20 },
+  tileSize: { width: 40, height: 40 },
 
   // Indicates whether the view is moving
   moving: false,
 
   // The time it takes to move 1 tile, in seconds
-  moveTime: 0.5,
+  moveTime: 0.3,
 
   // Background chunk array: backgroundImages[row][col]
   backgroundImages: null,
+
+  // Background chunk array: backgroundImages[row][col]
+  eventListeners: {},
+
+  addEventListener: function(event, listener) {
+    if (this.eventListeners[event])
+      this.eventListeners[event].push(listener);
+  },
+
+  removeEventListener: function(event, listener) {
+    if (this.eventListeners[event])
+    {
+      var index = this.eventListeners[event].indexOf(listener);
+      if (index != -1) {
+        this.this.eventListeners[event].splice(index, 1);
+      }
+    }
+  },
+
+  fireEvent: function(event) {
+    if (this.eventListeners[event])
+    {
+      for (var i = 0; i < this.eventListeners[event].length; i++) {
+        this.eventListeners[event][i]();
+      }
+    }
+  },
 
   // Converts map coordinaates to screen coordinates
   getScreenCoords: function(mapCoords) {
@@ -175,12 +208,12 @@ DisplayManager.prototype = {
   // Loads a background image chunk
   loadBgChunk: function(i, j) {
     var self = this;
-    var attrs = this.getScreenCoords({
-      x: j * this.chunkSize.width,
-      y: i * this.chunkSize.height,
-      width: this.chunkSize.width,
-      height: this.chunkSize.height
-    });
+    var attrs = {
+      x: j * this.chunkSize.width * this.tileSize.width,
+      y: i * this.chunkSize.height * this.tileSize.height,
+      width: this.chunkSize.width * this.tileSize.width,
+      height: this.chunkSize.height * this.tileSize.height
+    };
 
     // Row and column are 1-indexed
     var r = i + 1;
@@ -190,7 +223,7 @@ DisplayManager.prototype = {
     this.backgroundImages[i][j] = this.loadImage(attrs,
         function() {
           // Redraw the background layer
-          self.backgroundLayer.batchDraw();
+          self.backgroundLayer.draw();
         });
   },
 
@@ -211,21 +244,26 @@ DisplayManager.prototype = {
 
   // Moves the player in a direction
   move: function(direction) {
+    if (this.moving)
+      return;
+
+    var self = this;
     this.moving = true;
     // Move the background in the opposite direction to make it look like the player is moving.
     var vector = this.getVector(direction);
-    vector.x *= -1;
-    vector.y *= -1;
     // Move the background, objects, and NPCs
     var tween1 = new Kinetic.Tween({
       node: this.background,
       duration: this.moveTime,
-      x: this.background.x + this.tileSize.width * vector.x,
-      y: this.background.y + this.tileSize.height * vector.y,
+      x: this.background.getX() - this.tileSize.width * vector.x,
+      y: this.background.getY() - this.tileSize.height * vector.y,
       onFinish: function() {
+        self.moving = false;
+        self.view.x += vector.x;
+        self.view.y += vector.y;
         // Ensure the correct chunks are loaded
-        loadBg();
-        // TODO: notify GameManager?
+        self.loadBg();
+        self.fireEvent(DisplayManager.MOVE_COMPLETE);
       }
     });
     tween1.play();
