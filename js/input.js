@@ -44,7 +44,7 @@ function InputManager() {
 
   /* ============================== FUNCTIONS =============================== */
 
-  var keyDownFunction = function(event) {
+  function keyDownFunction(event) {
     var input = keyboardMap[event.which];
     if (input) {
       event.preventDefault();
@@ -55,7 +55,7 @@ function InputManager() {
     }
   };
 
-  var keyUpFunction = function(event) {
+  function keyUpFunction(event) {
     var input = keyboardMap[event.which];
     if (input) {
       event.preventDefault();
