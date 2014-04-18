@@ -27,21 +27,21 @@
     self.display.movestop();
   };
 
-  this.input.inputEventPress = this.gameEvents;
-  this.input.inputEventUnpress = this.gameEventsUp;
+  this.input.setInputEventPress(this.gameEvents);
+  this.input.setInputEventUnpress(this.gameEventsUp);
 
   this.display.addEventListener(DisplayManager.MOVE_COMPLETE, function() {
     if (self.menuActive)
       return;
 
     // Continue moving if the key is still pressed
-    if (self.input.inputStates[INPUT.UP].pressed) {
+    if (self.input.getInputState(INPUT.UP).pressed) {
       self.gameEvents[INPUT.UP]();
-    } else if (self.input.inputStates[INPUT.RIGHT].pressed) {
+    } else if (self.input.getInputState(INPUT.RIGHT).pressed) {
       self.gameEvents[INPUT.RIGHT]();
-    } else if (self.input.inputStates[INPUT.DOWN].pressed) {
+    } else if (self.input.getInputState(INPUT.DOWN).pressed) {
       self.gameEvents[INPUT.DOWN]();
-    } else if (self.input.inputStates[INPUT.LEFT].pressed) {
+    } else if (self.input.getInputState(INPUT.LEFT).pressed) {
       self.gameEvents[INPUT.LEFT]();
     }
   });
