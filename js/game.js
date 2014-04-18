@@ -13,8 +13,22 @@
   this.gameEvents[INPUT.RIGHT] = function() {
     self.display.move(DIRECTION.RIGHT);
   };
+  this.gameEventsUp = {};
+  this.gameEventsUp[INPUT.UP] = function() {
+    self.display.movestop();
+  };
+  this.gameEventsUp[INPUT.LEFT] = function() {
+    self.display.movestop();
+  };
+  this.gameEventsUp[INPUT.DOWN] = function() {
+    self.display.movestop();
+  };
+  this.gameEventsUp[INPUT.RIGHT] = function() {
+    self.display.movestop();
+  };
 
   this.input.inputEventPress = this.gameEvents;
+  this.input.inputEventUnpress = this.gameEventsUp;
 
   this.display.addEventListener(DisplayManager.MOVE_COMPLETE, function() {
     if (self.menuActive)
@@ -31,6 +45,8 @@
       self.gameEvents[INPUT.LEFT]();
     }
   });
+
+  this.display.loadRoom( "data/UWGmap.json" );
 }
 GameManager.prototype = {
   menuActive: false,
