@@ -92,6 +92,8 @@ DisplayManager.prototype = {
     }
   },
 
+  // TODO: These functions, if implemented, should go in the map module?
+  /*
   // Converts map coordinates to screen coordinates
   getScreenCoords: function(mapCoords) {
     var screenCoords = {
@@ -135,6 +137,7 @@ DisplayManager.prototype = {
       y: this.player.getY()
     })
   },
+  */
 
   // Loads an image from a url specified by attrs.url
   loadImage: function(attrs, callback) {
