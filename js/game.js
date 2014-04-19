@@ -6,7 +6,7 @@
 
   this.input.setInputEventPress(this.map.getInputEventPress());
 
-  this.map.loadMap("data/UWGmap.json", 0, 0);
+  this.map.loadMap("data/UWGmap.json", 272, 160);
 }
 
 var game = new GameManager();

@@ -61,10 +61,7 @@ DisplayManager.MOVE_COMPLETE = "move_complete";
 
 DisplayManager.prototype = {
 
-  stageSizePixels: {width: 360, height: 360},
-
-  // Indicates whether the view is moving
-  moving: false,
+  stageSizePixels: {width: 540, height: 540},
 
   eventListeners: {},
 
@@ -91,53 +88,6 @@ DisplayManager.prototype = {
       }
     }
   },
-
-  // TODO: These functions, if implemented, should go in the map module?
-  /*
-  // Converts map coordinates to screen coordinates
-  getScreenCoords: function(mapCoords) {
-    var screenCoords = {
-      x: (mapCoords.x - this.view.x) * this.tileSizePixels.width,
-      y: (mapCoords.y - this.view.y) * this.tileSizePixels.height,
-      width: 0, height: 0
-    };
-    if (mapCoords.width)
-      screenCoords.width = mapCoords.width * this.tileSizePixels.width;
-    if (mapCoords.height)
-      screenCoords.height = mapCoords.height * this.tileSizePixels.height;
-    return screenCoords;
-  },
-
-  // Converts screen coordinates to map coordinaates
-  getMapCoords: function(screenCoords) {
-    var mapCoords = {
-      x: this.view.x + Math.floor(screenCoords.x / this.tileSizePixels.width),
-      y: this.view.y + Math.floor(screenCoords.y / this.tileSizePixels.height),
-      width: 0, height: 0
-    };
-    if (screenCoords.width)
-      mapCoords.width = screenCoords.width / this.tileSizePixels.width;
-    if (screenCoords.height)
-      mapCoords.height = screenCoords.height / this.tileSizePixels.height;
-    return mapCoords;
-  },
-
-  // Gets the map coordinates of the tile that is in the centre of the view
-  getCentreTile: function() {
-    return {
-      x: this.view.x + Math.floor(this.view.width / 2),
-      y: this.view.y + Math.floor(this.view.height / 2)
-    };
-  },
-
-  // Gets the map coordinates of the tile that the player is currently standing on.
-  getPlayerTile: function() {
-    return this.getMapCoords({
-      x: this.player.getX(),
-      y: this.player.getY()
-    })
-  },
-  */
 
   // Loads an image from a url specified by attrs.url
   loadImage: function(attrs, callback) {
@@ -167,29 +117,5 @@ DisplayManager.prototype = {
         return { x: 1, y: 0 };
     }
     return null;
-  },
-
-  movestop: function() {
-    window.clearInterval(this.movefunid);
-    this.moving = false;
-  },
-
-  // Moves the player in a direction
-  move: function(direction) {
-    if (this.moving)
-      return;
-
-    var self = this;
-    this.moving = true;
-    // Move the background in the opposite direction to make it look like the player is moving.
-    var vector = this.getVector(direction);
-
-    var movefun = function() {
-      this.background.setX(this.background.getX() - vector.x * 3);
-      this.background.setY(this.background.getY() - vector.y * 3);
-      this.backgroundLayer.draw();
-    };
-
-    this.movefunid = window.setInterval( $.proxy(movefun, this), 50 );
   }
 };
