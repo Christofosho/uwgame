@@ -1,11 +1,12 @@
-function MapManager(display) {
+function MapManager(display, input) {
   /*============================= VARIABLES ==================================*/
   // Link to the display manager
   var display = display;
+  // Link to inputStates
+  var input = input;
 
   // Moving bool
   var moving = false;
-  var movingFunction = null;
   var movingFunctionId = null;
 
   // Map coordinates of the view. Indicates which tiles are currently in the view.
@@ -232,6 +233,8 @@ function MapManager(display) {
         var newRowY = topRowY;
         var x;
         break;
+      default:
+        return;
     }
 
     if(newColX !== undefined) {
@@ -247,26 +250,29 @@ function MapManager(display) {
       }
     }
 
-    var n_refreshes = 5;
+    var n_refreshes = 8;
     var targetViewPx = {x: -view.x * tileSizePixels.width,
       y: -view.y * tileSizePixels.height};
     var n = 0;
 
-    movingFunction = function() {
+    function movingFunction() {
       n++;
       display.background.setX((targetViewPx.x - viewPixels.x) * n / n_refreshes + viewPixels.x);
       display.background.setY((targetViewPx.y - viewPixels.y) * n / n_refreshes + viewPixels.y);
       display.backgroundLayer.draw();
       if(n == n_refreshes) {
-        window.clearInterval(movingFunctionId);
-        moving = false;
         viewPixels.x = targetViewPx.x;
         viewPixels.y = targetViewPx.y;
+        window.clearInterval(movingFunctionId);
+        if(input.getInputState(direction) == direction) {
+          shiftView(direction);
+        } else {
+          moving = false;
+        }
       }
     };
 
-    movingFunction();
-    movingFunctionId = window.setInterval(movingFunction, 100);
+    movingFunctionId = window.setInterval(movingFunction, 30);
       
     /*
     viewPixels.x = -view.x * tileSizePixels.width;
