@@ -1,4 +1,9 @@
 ﻿function GameManager() {
+  this.menuActive = false;
+  this.display = new DisplayManager();
+  this.input = new InputManager();
+  this.map = new MapManager(this.display);
+
   var self = this;
   this.gameEvents = {};
   this.gameEvents[INPUT.UP] = function() {
@@ -46,12 +51,8 @@
     }
   });
 
-  this.display.loadRoom( "data/UWGmap.json" );
+  //this.display.loadRoom("data/UWGmap.json");
+  this.map.loadMap("data/UWGmap.json");
 }
-GameManager.prototype = {
-  menuActive: false,
-  display: new DisplayManager(),
-  input: new InputManager()
-};
 
 var game = new GameManager();
