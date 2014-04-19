@@ -250,43 +250,38 @@ function MapManager(display, input) {
       }
     }
 
-    var n_refreshes = 8;
-    var targetViewPx = {x: -view.x * tileSizePixels.width,
+    var N = 4;
+    var target = {x: -view.x * tileSizePixels.width,
       y: -view.y * tileSizePixels.height};
     var n = 0;
 
     function movingFunction() {
       n++;
-      display.background.setX((targetViewPx.x - viewPixels.x) * n / n_refreshes + viewPixels.x);
-      display.background.setY((targetViewPx.y - viewPixels.y) * n / n_refreshes + viewPixels.y);
+      display.background.setX((target.x - viewPixels.x) * n / N + viewPixels.x);
+      display.background.setY((target.y - viewPixels.y) * n / N + viewPixels.y);
       display.backgroundLayer.draw();
-      if(n == n_refreshes) {
-        viewPixels.x = targetViewPx.x;
-        viewPixels.y = targetViewPx.y;
+      if(n == N) {
+        viewPixels.x = target.x;
+        viewPixels.y = target.y;
         window.clearInterval(movingFunctionId);
-        if(input.getInputState(direction) == direction) {
-          shiftView(direction);
-        } else {
-          moving = false;
-        }
+        moving = false;
+
+        // Continue moving
+        if(input.getInputState(direction).pressed) shiftView(direction);
+        else if(input.getInputState(INPUT.UP).pressed) shiftView(DIRECTION.UP);
+        else if(input.getInputState(INPUT.DOWN).pressed) shiftView(DIRECTION.DOWN);
+        else if(input.getInputState(INPUT.LEFT).pressed) shiftView(DIRECTION.LEFT);
+        else if(input.getInputState(INPUT.RIGHT).pressed) shiftView(DIRECTION.RIGHT);
       }
     };
 
     movingFunctionId = window.setInterval(movingFunction, 30);
-      
-    /*
-    viewPixels.x = -view.x * tileSizePixels.width;
-    viewPixels.y = -view.y * tileSizePixels.height;
-
-    display.background.setX(viewPixels.x);
-    display.background.setY(viewPixels.y);
-    display.backgroundLayer.draw();
-    */
   }
 
   /*============================= INITIALISE =================================*/
   // Load empty image
   emptyTileImage = new Image();
+  // TODO: make image path part of config?
   emptyTileImage.src = "img/empty.png";
 
   var inputEventPress = {};
