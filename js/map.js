@@ -25,9 +25,9 @@ function MapManager(display, input) {
   // Buffer for tiles on screen, and indexes for positions
   var tileBufferArray = null;
   var leftColI = null;
-  var rightColI = null;
   var topRowJ = null;
-  var bottomRowJ = null;
+  var leftColX = null;
+  var topRowY = null;
 
   // Number of tiles each side of the view to load
   var TILE_BUFFER = 1;
