@@ -6,6 +6,9 @@ function MapManager(display) {
   // Map coordinates of the view. Indicates which tiles are currently in the view.
   var view = { x: 0, y: 0, width: null, height: null };
 
+  // Map-pixel coordinates of view
+  var viewPixels = {x: 0, y: 0};
+
   // Array of tileset images and individual tile images
   var tileSetImages = [];
   var tileImages = [];
@@ -34,7 +37,7 @@ function MapManager(display) {
 
   /*============================= FUNCTIONS ==================================*/
   // Load a new map file
-  function loadMap(url) {
+  function loadMap(url, x, y) {
     // Remove old tilesets:
     tileSetImages = [];
     tileImages = [];
@@ -45,7 +48,7 @@ function MapManager(display) {
       initialiseMap();
       loadTileSets(function() {
           makeTileImages();
-          loadTiles();
+          loadView(x, y);
           display.backgroundLayer.draw();
       });
     });
@@ -58,6 +61,24 @@ function MapManager(display) {
     tileSizePixels.width = map.tilewidth;
     view.width = Math.ceil(display.stageSizePixels.width / tileSizePixels.width);
     view.height = Math.ceil(display.stageSizePixels.height / tileSizePixels.height);
+
+    // Find the bg layer, and extract data
+    var i;
+    for(i in map.layers) {
+      if(map.layers[i].name == "bg") {
+        bgLayer = map.layers[i];
+        break;
+      } else if(i >= map.layers.length) {
+        console.warning( "No bg layer found for map!" );
+        return;
+      }
+    }
+
+    // Form (or reform) buffer for tiles on screen
+    tileBufferArray = new Array(view.width + TILE_BUFFER * 2);
+    for(i = 0; i < tileBufferArray.length; i++) {
+      tileBufferArray[i] = new Array(view.height + TILE_BUFFER * 2);
+    }
 
     // TODO: reload player image if tilesize changed?
   }
@@ -106,75 +127,32 @@ function MapManager(display) {
     }
   }
 
-  // During initial setup, load all tiles in screen area
-  function loadTiles() {
-    var i, j;
+  // Load all tiles in given view area
+  function loadView(x, y) {
+    // Set view
+    view.x = x;
+    view.y = y;
+    viewPixels.x = -view.x * tileSizePixels.width;
+    viewPixels.y = -view.y * tileSizePixels.height;
 
-    // Find the bg layer, and extract data
-    for(i in map.layers) {
-      if(map.layers[i].name == "bg") {
-        bgLayer = map.layers[i];
-        break;
-      } else if(i >= map.layers.length) {
-        console.warning( "No bg layer found for map!" );
-        return;
-      }
-    }
-
-    // Form (or reform) buffer for tiles on screen
-    tileBufferArray = new Array(view.width + TILE_BUFFER * 2);
-    for(i = 0; i < tileBufferArray.length; i++) {
-      tileBufferArray[i] = new Array(view.height + TILE_BUFFER * 2);
-    }
     leftColI = 0;
     leftColX = view.x - TILE_BUFFER;
-    //rightColI = view.width + TILE_BUFFER * 2;
     topRowJ = 0;
     topRowY = view.y - TILE_BUFFER;
-    //bottomRowJ = view.height + TILE_BUFFER * 2;
-
-    // Iterate through tiles in the view and buffer, add to array and bg
-    var bg_index;
-    var tileNumber;
-    var position = { x: 0, y: 0 };
-    for(i = 0; i < view.width + TILE_BUFFER * 2; i++) {
-      var x = i - TILE_BUFFER + view.x;
-      for(j = 0; j < view.height + TILE_BUFFER * 2; j++) {
-        var y = j - TILE_BUFFER + view.y;
-        bg_index = x + y * bgLayer.width;
-        position.x = x * tileSizePixels.width;
-        position.y = y * tileSizePixels.height;
-        // OOB tiles defined by the 'empty' tile (number 0)
-        if(x >= 0 && y >= 0 && bg_index < bgLayer.data.length) {
-          tileNumber = bgLayer.data[bg_index];
-        } else {
-          tileNumber = 0;
-        }
-        //tileBufferArray[i][j] = makeNewTile(tileNumber, position);
-        //display.background.add(tileBufferArray[i][j]);
-        newTile(x, y);
+    var x, y;
+    for(x = leftColX; x < leftColX + tileBufferArray.length; x++) {
+      for(y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
+        loadTile(x, y);
       }
     }
+
+    display.background.setX(viewPixels.x);
+    display.background.setY(viewPixels.y);
+    display.backgroundLayer.draw();
   }
 
-  // Make a new Kinetic Image tile
-  function makeNewTile(tileNumber, position) {
-    var config = {};
-    if(tileImages[tileNumber]) {
-      config.image = tileImages[tileNumber];
-    } else {
-      config.image = emptyTileImage;
-    }
-    config.height = tileSizePixels.height;
-    config.width = tileSizePixels.width;
-    config.x = position.x;
-    config.y = position.y;
-
-    return new Kinetic.Image(config);
-  }
-
-  // Create new tile at map coords x, y
-  function newTile(x, y) {
+  // Reload the tile at x, y - create if necessary
+  function loadTile(x, y) {
     if(x < leftColX || x >= leftColX + tileBufferArray.length ||
        y < topRowY || y >= topRowY + tileBufferArray[0].length)
     {
@@ -183,8 +161,16 @@ function MapManager(display) {
     }
 
     // tileBufferArray indexes
-    var i = (x - leftColX) % tileBufferArray.length + leftColI;
-    var j = (y - topRowY) % tileBufferArray[0].length + topRowJ;
+    var i = (x - leftColX + leftColI) % tileBufferArray.length;
+    var j = (y - topRowY + topRowJ) % tileBufferArray[0].length;
+
+    // Ensure tile exists
+    var tile = tileBufferArray[i][j];
+    if(tile === undefined) {
+      tile = new Kinetic.Image();
+      tileBufferArray[i][j] = tile;
+      display.background.add(tile);
+    }
 
     // tileNumber
     var bg_index = x + y * bgLayer.width;
@@ -196,72 +182,68 @@ function MapManager(display) {
       tileNumber = 0;
     }
 
-    var config = {};
-    if(tileImages[tileNumber]) {
-      config.image = tileImages[tileNumber];
-    } else {
-      config.image = emptyTileImage;
-    }
-    config.height = tileSizePixels.height;
-    config.width = tileSizePixels.width;
-    config.x = x * tileSizePixels.width;
-    config.y = y * tileSizePixels.height;
-
-    tileBufferArray[i][j] = new Kinetic.Image(config);
-    display.background.add(tileBufferArray[i][j]);
-  }
-
-  // Assign a new tile to an existing Kinetic Image tile
-  function reloadTile(tile, tileNumber, position) {
+    // Set the tile properties
     if(tileImages[tileNumber]) {
       tile.setImage(tileImages[tileNumber]);
     } else {
       tile.setImage(emptyTileImage);
     }
-    tile.x(position.x);
-    tile.y(position.y);
+    tile.x(x * tileSizePixels.width);
+    tile.y(y * tileSizePixels.height);
   }
 
-  function reloadTilesInRow(j, y) {
-    var i, x;
-    var tileNumber;
-    var bg_index;
-    var position = {};
-    position.y = y * tileSizePixels.height;
-
-    for(i = 0; i < view.width + TILE_BUFFER * 2; i++) {
-      var x = i - TILE_BUFFER + view.x;
-      bg_index = x + y * bgLayer.width;
-      position.x = x * tileSizePixels.width;
-      // OOB tiles defined by the 'empty' tile (number 0)
-      if(x >= 0 && y >= 0 && bg_index < bgLayer.data.length) {
-        tileNumber = bgLayer.data[bg_index];
-      } else {
-        tileNumber = 0;
-      }
-      reloadTile(tileBufferArray[i][j], tileNumber, position);
+  /* Shift buffer to tiles one over, reload the new tiles
+     Does not move the screen
+     Does now redraw the screen
+   */
+  function shiftView(direction) {
+    switch(direction) {
+      case DIRECTION.LEFT:
+        view.x--;
+        leftColX--;
+        leftColI = (leftColI - 1 + tileBufferArray.length) % tileBufferArray.length;
+        var newColX = leftColX;
+        break;
+      case DIRECTION.RIGHT:
+        view.x++;
+        leftColX++;
+        leftColI = (leftColI + 1) % tileBufferArray.length;
+        var newColX = leftColX + tileBufferArray.length - 1;
+        break;
+      case DIRECTION.DOWN:
+        view.y++;
+        topRowY++;
+        topRowJ = (topRowJ + 1) % tileBufferArray.length;
+        var newRowY = topRowY + tileBufferArray[0].length - 1;
+        break;
+      case DIRECTION.UP:
+        view.y--;
+        topRowY--;
+        topRowJ = (topRowJ - 1 + tileBufferArray.length) % tileBufferArray.length;
+        var newRowY = topRowY;
+        var x;
+        break;
     }
-  }
 
-  function reloadTilesInCol(i, x) {
-    var j, y;
-    var tileNumber;
-    var bg_index;
-    var position = {};
-    position.x = x * tileSizePixels.width;
-
-    for(j = 0; j < view.height + TILE_BUFFER * 2; j++) {
-      var y = j - TILE_BUFFER + view.y;
-      bg_index = x + y * bgLayer.width;
-      position.y = y * tileSizePixels.height;
-      // OOB tiles defined by the 'empty' tile (number 0)
-      if(x >= 0 && y >= 0 && bg_index < bgLayer.data.length) {
-        tileNumber = bgLayer.data[bg_index];
-      } else {
-        tileNumber = 0;
+    if(newColX !== undefined) {
+      var y;
+      for(y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
+        loadTile(newColX, y);
       }
-      reloadTile(tileBufferArray[i][j], tileNumber, position);
     }
+    if(newRowY !== undefined) {
+      var x;
+      for(x = leftColX; x < leftColX + tileBufferArray.length; x++) {
+        loadTile(x, newRowY);
+      }
+    }
+
+    viewPixels.x = -view.x * tileSizePixels.width;
+    viewPixels.y = -view.y * tileSizePixels.height;
+
+    display.background.setX(viewPixels.x);
+    display.background.setY(viewPixels.y);
+    display.backgroundLayer.draw();
   }
 
   /*============================= INITIALISE =================================*/
@@ -269,7 +251,18 @@ function MapManager(display) {
   emptyTileImage = new Image();
   emptyTileImage.src = "img/empty.png";
 
+  var inputEventPress = {};
+  inputEventPress[INPUT.UP] = function() {shiftView(DIRECTION.UP)};
+  inputEventPress[INPUT.DOWN] = function() {shiftView(DIRECTION.DOWN)};
+  inputEventPress[INPUT.LEFT] = function() {shiftView(DIRECTION.LEFT)};
+  inputEventPress[INPUT.RIGHT] = function() {shiftView(DIRECTION.RIGHT)};
+
+  /*=========================== GET/SET FUNCTIONS ============================*/
+  function getInputEventPress() {return inputEventPress;}
+
   return {
-    loadMap: loadMap
+    loadMap: loadMap,
+    loadView: loadView,
+    getInputEventPress: getInputEventPress
   };
 }

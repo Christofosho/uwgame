@@ -4,6 +4,9 @@
   this.input = new InputManager();
   this.map = new MapManager(this.display);
 
+  this.input.setInputEventPress(this.map.getInputEventPress());
+
+  /*
   var self = this;
   this.gameEvents = {};
   this.gameEvents[INPUT.UP] = function() {
@@ -50,9 +53,9 @@
       self.gameEvents[INPUT.LEFT]();
     }
   });
+  */
 
-  //this.display.loadRoom("data/UWGmap.json");
-  this.map.loadMap("data/UWGmap.json");
+  this.map.loadMap("data/UWGmap.json", 0, 0);
 }
 
 var game = new GameManager();
