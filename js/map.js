@@ -3,6 +3,11 @@ function MapManager(display) {
   // Link to the display manager
   var display = display;
 
+  // Moving bool
+  var moving = false;
+  var movingFunction = null;
+  var movingFunctionId = null;
+
   // Map coordinates of the view. Indicates which tiles are currently in the view.
   var view = { x: 0, y: 0, width: null, height: null };
 
@@ -197,6 +202,10 @@ function MapManager(display) {
      Does now redraw the screen
    */
   function shiftView(direction) {
+    if(moving) {
+      return;
+    }
+    moving = true;
     switch(direction) {
       case DIRECTION.LEFT:
         view.x--;
@@ -238,12 +247,35 @@ function MapManager(display) {
       }
     }
 
+    var n_refreshes = 5;
+    var targetViewPx = {x: -view.x * tileSizePixels.width,
+      y: -view.y * tileSizePixels.height};
+    var n = 0;
+
+    movingFunction = function() {
+      n++;
+      display.background.setX((targetViewPx.x - viewPixels.x) * n / n_refreshes + viewPixels.x);
+      display.background.setY((targetViewPx.y - viewPixels.y) * n / n_refreshes + viewPixels.y);
+      display.backgroundLayer.draw();
+      if(n == n_refreshes) {
+        window.clearInterval(movingFunctionId);
+        moving = false;
+        viewPixels.x = targetViewPx.x;
+        viewPixels.y = targetViewPx.y;
+      }
+    };
+
+    movingFunction();
+    movingFunctionId = window.setInterval(movingFunction, 100);
+      
+    /*
     viewPixels.x = -view.x * tileSizePixels.width;
     viewPixels.y = -view.y * tileSizePixels.height;
 
     display.background.setX(viewPixels.x);
     display.background.setY(viewPixels.y);
     display.backgroundLayer.draw();
+    */
   }
 
   /*============================= INITIALISE =================================*/
