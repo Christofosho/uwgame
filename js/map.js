@@ -1,11 +1,6 @@
 function MapManager(display, input) {
   /*============================= VARIABLES ==================================*/
-  // Link to the display manager
-  var display = display;
-  // Link to inputStates
-  var input = input;
-
-  // Moving bool
+  // Keep track of whether the map is currently moving
   var moving = false;
   var movingFunctionId = null;
 
@@ -13,7 +8,7 @@ function MapManager(display, input) {
   var view = { x: 0, y: 0, width: null, height: null };
 
   // Map-pixel coordinates of view
-  var viewPixels = {x: 0, y: 0};
+  var viewPixels = { x: 0, y: 0 };
 
   // Array of tileset images and individual tile images
   var tileSetImages = [];
@@ -30,7 +25,7 @@ function MapManager(display, input) {
   var topRowY = null;
 
   // Number of tiles each side of the view to load
-  var TILE_BUFFER = 1;
+  var TILE_BUFFER_SIZE = 1;
 
   // Layer information for background image
   var bgLayer = null;
@@ -53,9 +48,9 @@ function MapManager(display, input) {
       map = json;
       initialiseMap();
       loadTileSets(function() {
-          makeTileImages();
-          loadView(x, y);
-          display.backgroundLayer.draw();
+        makeTileImages();
+        loadView(x, y);
+        display.backgroundLayer.draw();
       });
     });
   }
@@ -70,20 +65,20 @@ function MapManager(display, input) {
 
     // Find the bg layer, and extract data
     var i;
-    for(i in map.layers) {
-      if(map.layers[i].name == "bg") {
+    for (i in map.layers) {
+      if (map.layers[i].name == "bg") {
         bgLayer = map.layers[i];
         break;
-      } else if(i >= map.layers.length) {
-        console.warning( "No bg layer found for map!" );
+      } else if (i >= map.layers.length) {
+        console.warning("No bg layer found for map!");
         return;
       }
     }
 
     // Form (or reform) buffer for tiles on screen
-    tileBufferArray = new Array(view.width + TILE_BUFFER * 2);
-    for(i = 0; i < tileBufferArray.length; i++) {
-      tileBufferArray[i] = new Array(view.height + TILE_BUFFER * 2);
+    tileBufferArray = new Array(view.width + TILE_BUFFER_SIZE * 2);
+    for (i = 0; i < tileBufferArray.length; i++) {
+      tileBufferArray[i] = new Array(view.height + TILE_BUFFER_SIZE * 2);
     }
 
     // TODO: reload player image if tilesize changed?
@@ -94,17 +89,17 @@ function MapManager(display, input) {
     tileSetImages = new Array(map.tilesets.length);
 
     var i;
-    for(i in map.tilesets) {
+    for (i in map.tilesets) {
       tileSetImages[i] = new Image();
       tileSetImages[i].onload = function() {
         // Check if all tilSetImages are loaded:
         var j, complete = true;
-        for(j in tileSetImages) {
-          if(!tileSetImages[j].complete) {
+        for (j in tileSetImages) {
+          if (!tileSetImages[j].complete) {
             complete = false;
           }
         }
-        if(complete && nextFun) {
+        if (complete && nextFun) {
           nextFun();
         }
       };
@@ -116,18 +111,20 @@ function MapManager(display, input) {
   // Crop all the tileset images to the individual tile images
   function makeTileImages() {
     var tileset_i;
-    for(tileset_i in tileSetImages) {
+    for (tileset_i in tileSetImages) {
       var tileset = map.tilesets[tileset_i];
       var nperrow = Math.floor(tileset.imagewidth / tileset.tilewidth);
       var totaln = nperrow * Math.floor(tileset.imageheight / tileset.tileheight);
 
       var i;
-      for(i = 0; i < totaln; i++) {
+      for (i = 0; i < totaln; i++) {
         // Define crop rectangle
-        var rect = {left: (i % nperrow) * tileset.tilewidth,
-                    top: Math.floor(i / nperrow) * tileset.tileheight,
-                    width: tileset.tilewidth,
-                    height: tileset.tileheight};
+        var rect = {
+          left: (i % nperrow) * tileset.tilewidth,
+          top: Math.floor(i / nperrow) * tileset.tileheight,
+          width: tileset.tilewidth,
+          height: tileset.tileheight
+        };
         tileImages[tileset.firstgid + i] = Pixastic.process(tileSetImages[tileset_i], "crop", rect);
       }
     }
@@ -142,12 +139,12 @@ function MapManager(display, input) {
     viewPixels.y = -view.y * tileSizePixels.height;
 
     leftColI = 0;
-    leftColX = view.x - TILE_BUFFER;
+    leftColX = view.x - TILE_BUFFER_SIZE;
     topRowJ = 0;
-    topRowY = view.y - TILE_BUFFER;
+    topRowY = view.y - TILE_BUFFER_SIZE;
     var x, y;
-    for(x = leftColX; x < leftColX + tileBufferArray.length; x++) {
-      for(y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
+    for (x = leftColX; x < leftColX + tileBufferArray.length; x++) {
+      for (y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
         loadTile(x, y);
       }
     }
@@ -159,9 +156,8 @@ function MapManager(display, input) {
 
   // Reload the tile at x, y - create if necessary
   function loadTile(x, y) {
-    if(x < leftColX || x >= leftColX + tileBufferArray.length ||
-       y < topRowY || y >= topRowY + tileBufferArray[0].length)
-    {
+    if (x < leftColX || x >= leftColX + tileBufferArray.length ||
+       y < topRowY || y >= topRowY + tileBufferArray[0].length) {
       console.warning("Attempt to create tile OOB of tileBufferArray");
       return;
     }
@@ -172,7 +168,7 @@ function MapManager(display, input) {
 
     // Ensure tile exists
     var tile = tileBufferArray[i][j];
-    if(tile === undefined) {
+    if (tile === undefined) {
       tile = new Kinetic.Image();
       tileBufferArray[i][j] = tile;
       display.background.add(tile);
@@ -181,7 +177,7 @@ function MapManager(display, input) {
     // tileNumber
     var bg_index = x + y * bgLayer.width;
     var tileNumber
-    if(x >= 0 && y >= 0 && bg_index < bgLayer.data.length) {
+    if (x >= 0 && y >= 0 && bg_index < bgLayer.data.length) {
       tileNumber = bgLayer.data[bg_index];
     } else {
       // OOB x and y - show empty tile
@@ -189,7 +185,7 @@ function MapManager(display, input) {
     }
 
     // Set the tile properties
-    if(tileImages[tileNumber]) {
+    if (tileImages[tileNumber]) {
       tile.setImage(tileImages[tileNumber]);
     } else {
       tile.setImage(emptyTileImage);
@@ -203,11 +199,11 @@ function MapManager(display, input) {
      Does now redraw the screen
    */
   function shiftView(direction) {
-    if(moving) {
+    if (moving) {
       return;
     }
     moving = true;
-    switch(direction) {
+    switch (direction) {
       case DIRECTION.LEFT:
         view.x--;
         leftColX--;
@@ -237,22 +233,24 @@ function MapManager(display, input) {
         return;
     }
 
-    if(newColX !== undefined) {
+    if (newColX !== undefined) {
       var y;
-      for(y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
+      for (y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
         loadTile(newColX, y);
       }
     }
-    if(newRowY !== undefined) {
+    if (newRowY !== undefined) {
       var x;
-      for(x = leftColX; x < leftColX + tileBufferArray.length; x++) {
+      for (x = leftColX; x < leftColX + tileBufferArray.length; x++) {
         loadTile(x, newRowY);
       }
     }
 
     var N = 4;
-    var target = {x: -view.x * tileSizePixels.width,
-      y: -view.y * tileSizePixels.height};
+    var target = {
+      x: -view.x * tileSizePixels.width,
+      y: -view.y * tileSizePixels.height
+    };
     var n = 0;
 
     function movingFunction() {
@@ -260,18 +258,18 @@ function MapManager(display, input) {
       display.background.setX((target.x - viewPixels.x) * n / N + viewPixels.x);
       display.background.setY((target.y - viewPixels.y) * n / N + viewPixels.y);
       display.backgroundLayer.draw();
-      if(n == N) {
+      if (n == N) {
         viewPixels.x = target.x;
         viewPixels.y = target.y;
         window.clearInterval(movingFunctionId);
         moving = false;
 
         // Continue moving
-        if(input.getInputState(direction).pressed) shiftView(direction);
-        else if(input.getInputState(INPUT.UP).pressed) shiftView(DIRECTION.UP);
-        else if(input.getInputState(INPUT.DOWN).pressed) shiftView(DIRECTION.DOWN);
-        else if(input.getInputState(INPUT.LEFT).pressed) shiftView(DIRECTION.LEFT);
-        else if(input.getInputState(INPUT.RIGHT).pressed) shiftView(DIRECTION.RIGHT);
+        if (input.getInputState(direction).pressed) shiftView(direction);
+        else if (input.getInputState(INPUT.UP).pressed) shiftView(DIRECTION.UP);
+        else if (input.getInputState(INPUT.DOWN).pressed) shiftView(DIRECTION.DOWN);
+        else if (input.getInputState(INPUT.LEFT).pressed) shiftView(DIRECTION.LEFT);
+        else if (input.getInputState(INPUT.RIGHT).pressed) shiftView(DIRECTION.RIGHT);
       }
     };
 
@@ -285,13 +283,13 @@ function MapManager(display, input) {
   emptyTileImage.src = "img/empty.png";
 
   var inputEventPress = {};
-  inputEventPress[INPUT.UP] = function() {shiftView(DIRECTION.UP)};
-  inputEventPress[INPUT.DOWN] = function() {shiftView(DIRECTION.DOWN)};
-  inputEventPress[INPUT.LEFT] = function() {shiftView(DIRECTION.LEFT)};
-  inputEventPress[INPUT.RIGHT] = function() {shiftView(DIRECTION.RIGHT)};
+  inputEventPress[INPUT.UP] = function() { shiftView(DIRECTION.UP) };
+  inputEventPress[INPUT.DOWN] = function() { shiftView(DIRECTION.DOWN) };
+  inputEventPress[INPUT.LEFT] = function() { shiftView(DIRECTION.LEFT) };
+  inputEventPress[INPUT.RIGHT] = function() { shiftView(DIRECTION.RIGHT) };
 
   /*=========================== GET/SET FUNCTIONS ============================*/
-  function getInputEventPress() {return inputEventPress;}
+  function getInputEventPress() { return inputEventPress; }
 
   return {
     loadMap: loadMap,
