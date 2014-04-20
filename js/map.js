@@ -257,8 +257,8 @@ function MapManager(display, input) {
 
     function movingFunction() {
       n++;
-      display.background.setX((target.x - viewPixels.x) * n / N + viewPixels.x);
-      display.background.setY((target.y - viewPixels.y) * n / N + viewPixels.y);
+      display.background.setX(Math.round((target.x - viewPixels.x) * n / N) + viewPixels.x);
+      display.background.setY(Math.round((target.y - viewPixels.y) * n / N) + viewPixels.y);
       display.backgroundLayer.draw();
       if(n == N) {
         viewPixels.x = target.x;
