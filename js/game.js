@@ -1,12 +1,19 @@
 ﻿function GameManager() {
-  this.menuActive = false;
-  this.display = new DisplayManager();
-  this.input = new InputManager();
-  this.map = new MapManager(this.display, this.input);
+  var menuActive = false;
+  var display = new DisplayManager();
+  var input = new InputManager();
+  var map = new MapManager(display, input);
 
-  this.input.setInputEventPress(this.map.getInputEventPress());
+  input.setInputEventPress(map.getInputEventPress());
 
-  this.map.loadMap("data/UWGmap.json", 272, 160);
+  map.loadMap("data/UWGmap.json", 272, 160);
+
+  return {
+    menuActive: menuActive,
+    display: display,
+    input: input,
+    map: map
+  };
 }
 
 var game = new GameManager();

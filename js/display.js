@@ -1,4 +1,5 @@
-﻿/* How things work:
+﻿// display.js: Display Manager
+/* How things work:
  - There are 2 types of coordinates:
     1) Map coordinates: integer values representing the x and y indices of a tile
     2) Screen coordinates: represent pixel locations of the screen, relative to the canvas origin
@@ -15,27 +16,68 @@
     4) Player layer:     contains the player. Will mostly stay in the centre of the screen.
     5) Menu layer:       main menu, inventory, etc.
 */
-function DisplayManager(windowSizePixels) {
+function DisplayManager(stageSizePixels) {
 
-  this.eventListeners[DisplayManager.MOVE_COMPLETE] = [];
+  if (!stageSizePixels)
+    stageSizePixels = { width: 540, height: 540 };
 
-  this.sizePixels = windowSizePixels;
+  var eventListeners = {};
+  eventListeners[DisplayManager.MOVE_COMPLETE] = [];
 
-  this.stage = new Kinetic.Stage({
+  function addEventListener(event, listener) {
+    if (eventListeners[event])
+      eventListeners[event].push(listener);
+  }
+
+  function removeEventListener(event, listener) {
+    if (eventListeners[event])
+    {
+      var index = eventListeners[event].indexOf(listener);
+      if (index != -1) {
+        eventListeners[event].splice(index, 1);
+      }
+    }
+  }
+
+  function fireEvent(event) {
+    if (eventListeners[event])
+    {
+      for (var i = 0; i < eventListeners[event].length; i++) {
+        eventListeners[event][i]();
+      }
+    }
+  }
+
+  // Loads an image from a url specified by attrs.url
+  function loadImage(attrs, callback) {
+    var img = new Kinetic.Image(attrs);
+    var imageObj = new Image();
+    imageObj.onload = function() {
+      img.setImage(imageObj);
+      if (callback) {
+        callback();
+      }
+    };
+    imageObj.src = attrs.url;
+
+    return img;
+  }
+
+  var stage = new Kinetic.Stage({
     container: 'game',
-    width: this.stageSizePixels.width,
-    height: this.stageSizePixels.height
+    width: stageSizePixels.width,
+    height: stageSizePixels.height
   });
 
-  this.backgroundLayer = new Kinetic.Layer();
-  this.objectLayer = new Kinetic.Layer();
-  this.npcLayer = new Kinetic.Layer();
-  this.playerLayer = new Kinetic.Layer();
-  this.menuLayer = new Kinetic.Layer();
+  var backgroundLayer = new Kinetic.Layer();
+  var objectLayer = new Kinetic.Layer();
+  var npcLayer = new Kinetic.Layer();
+  var playerLayer = new Kinetic.Layer();
+  var menuLayer = new Kinetic.Layer();
 
   // Create background group
-  this.background = new Kinetic.Group({ x: 0, y: 0 });
-  this.backgroundLayer.add(this.background);
+  var background = new Kinetic.Group({ x: 0, y: 0 });
+  backgroundLayer.add(background);
 
   // TODO: move somewhere else - possibly a player manager?
   /*
@@ -50,72 +92,22 @@ function DisplayManager(windowSizePixels) {
   this.playerLayer.add(this.player);
   */
 
-  this.stage.add(this.backgroundLayer)
-    .add(this.objectLayer)
-    .add(this.npcLayer)
-    .add(this.playerLayer)
-    .add(this.menuLayer);
+  stage.add(backgroundLayer)
+    .add(objectLayer)
+    .add(npcLayer)
+    .add(playerLayer)
+    .add(menuLayer);
+
+  return {
+    stageSizePixels: stageSizePixels,
+    backgroundLayer: backgroundLayer,
+    objectLayer: objectLayer,
+    npcLayer: npcLayer,
+    playerLayer: playerLayer,
+    menuLayer: menuLayer,
+    background: background,
+
+  };
 }
 
 DisplayManager.MOVE_COMPLETE = "move_complete";
-
-DisplayManager.prototype = {
-
-  stageSizePixels: {width: 540, height: 540},
-
-  eventListeners: {},
-
-  addEventListener: function(event, listener) {
-    if (this.eventListeners[event])
-      this.eventListeners[event].push(listener);
-  },
-
-  removeEventListener: function(event, listener) {
-    if (this.eventListeners[event])
-    {
-      var index = this.eventListeners[event].indexOf(listener);
-      if (index != -1) {
-        this.this.eventListeners[event].splice(index, 1);
-      }
-    }
-  },
-
-  fireEvent: function(event) {
-    if (this.eventListeners[event])
-    {
-      for (var i = 0; i < this.eventListeners[event].length; i++) {
-        this.eventListeners[event][i]();
-      }
-    }
-  },
-
-  // Loads an image from a url specified by attrs.url
-  loadImage: function(attrs, callback) {
-    var img = new Kinetic.Image(attrs);
-    var imageObj = new Image();
-    imageObj.onload = function() {
-      img.setImage(imageObj);
-      if (callback) {
-        callback();
-      }
-    };
-    imageObj.src = attrs.url;
-
-    return img;
-  },
-
-  // Get a vector that corresponds to a direction
-  getVector: function(direction) {
-    switch (direction) {
-      case DIRECTION.UP:
-        return { x: 0, y: -1 };
-      case DIRECTION.DOWN:
-        return { x: 0, y: 1 };
-      case DIRECTION.LEFT:
-        return { x: -1, y: 0 };
-      case DIRECTION.RIGHT:
-        return { x: 1, y: 0 };
-    }
-    return null;
-  }
-};
