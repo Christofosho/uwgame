@@ -1,3 +1,4 @@
+// global.js: global constants
 /* NOTE: Do not use the string itself as an index.
      eg: use INPUT.UP instead of "up"
 */
