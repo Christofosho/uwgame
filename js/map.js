@@ -36,17 +36,18 @@ function MapManager(display, input) {
   // Map (loaded from the Tiled JSON file)
   var map = null;
 
-  // A hidden canvas used for image operations, such as combining background tiles into one big image
-  var hiddenCanvas = document.createElement("canvas");
-  hiddenCanvas.width = "10000";
-  hiddenCanvas.height = "10000";
-  var hiddenCtx = hiddenCanvas.getContext("2d");
+  // A hidden canvas used to store the entire background
+  var hiddenBackgroundCanvas = document.createElement("canvas");
+  hiddenBackgroundCanvas.width = "10000";
+  hiddenBackgroundCanvas.height = "10000";
+  var hiddenBackgroundCtx = hiddenBackgroundCanvas.getContext("2d");
 
-  var tempCanvas = document.createElement("canvas");
-  tempCanvas.style.border = "black 1px solid";
-  tempCanvas.width = "1000";
-  tempCanvas.height = "1000";
-  var tempCtx = tempCanvas.getContext("2d");
+  // A hidden canvas used to draw the current view of the background
+  var hiddenViewCanvas = document.createElement("canvas");
+  hiddenViewCanvas.style.border = "black 1px solid";
+  hiddenViewCanvas.width = "1000";
+  hiddenViewCanvas.height = "1000";
+  var hiddenViewCtx = hiddenViewCanvas.getContext("2d");
 
   /*============================= FUNCTIONS ==================================*/
   // Load a new map file
@@ -134,7 +135,9 @@ function MapManager(display, input) {
           width: tileset.tilewidth,
           height: tileset.tileheight
         };
-        tileImages[tileset.firstgid + i] = Pixastic.process(tileSetImages[tileset_i], "crop", rect);
+        var tileImage = new Image();
+        tileImage.src = Pixastic.process(tileSetImages[tileset_i], "crop", rect).toDataURL();
+        tileImages[tileset.firstgid + i] = tileImage;
       }
     }
   }
@@ -157,14 +160,14 @@ function MapManager(display, input) {
       }
     }
 
-    var imageData = hiddenCtx.getImageData(
+    var imageData = hiddenBackgroundCtx.getImageData(
       leftColX * tileSizePixels.width,
       topRowY * tileSizePixels.height,
       (view.width + TILE_BUFFER_SIZE * 2) * tileSizePixels.width,
       (view.height + TILE_BUFFER_SIZE * 2) * tileSizePixels.height);
-    tempCtx.putImageData(imageData, 0, 0);
+    hiddenViewCtx.putImageData(imageData, 0, 0);
     var backgroundImage = new Image();
-    backgroundImage.src = tempCanvas.toDataURL();
+    backgroundImage.src = hiddenViewCanvas.toDataURL();
     display.background.setX(-TILE_BUFFER_SIZE * tileSizePixels.width);
     display.background.setY(-TILE_BUFFER_SIZE * tileSizePixels.height);
     display.background.setImage(backgroundImage);
@@ -188,7 +191,6 @@ function MapManager(display, input) {
     if (tile === undefined) {
       tile = new Kinetic.Image();
       tileBufferArray[i][j] = tile;
-      //display.background.add(tile);
     }
 
     // tileNumber
@@ -204,8 +206,7 @@ function MapManager(display, input) {
     // Set the tile properties
     var tileImage;
     if (tileImages[tileNumber]) {
-      tileImage = new Image();
-      tileImage.src = tileImages[tileNumber].toDataURL();
+      tileImage = tileImages[tileNumber];
     } else {
       tileImage = emptyTileImage;
     }
@@ -213,7 +214,7 @@ function MapManager(display, input) {
     tile.setX(x * tileSizePixels.width);
     tile.setY(y * tileSizePixels.height);
 
-    hiddenCtx.drawImage(tileImage, tile.getX(), tile.getY());
+    hiddenBackgroundCtx.drawImage(tileImage, tile.getX(), tile.getY());
   }
 
   /* Shift buffer to tiles one over, reload the new tiles
@@ -270,32 +271,37 @@ function MapManager(display, input) {
       }
     }
 
+    var duration = 300; // milliseconds
+    var frameRate = 30; // frames per second (fps)
+    var totalFrames = duration / frameRate;
     var start = {
       x: -TILE_BUFFER_SIZE * tileSizePixels.width,
       y: -TILE_BUFFER_SIZE * tileSizePixels.height
     };
-
-    var duration = 300; // milliseconds
-    var frameRate = 30; // fps
-    var totalFrames = duration / frameRate;
     var target = {
       x: (-TILE_BUFFER_SIZE - vector.x) * tileSizePixels.width,
       y: (-TILE_BUFFER_SIZE - vector.y) * tileSizePixels.height
     };
     var currentFrame = 0;
 
+    // Use a custom tween function to move the background, since the KineticJS tween causes problems due to
+    // placing images on 1/2 pixels.
+    // TODO: maybe we can go back to Kinetic.Tween since the background is one whole image again.
     function moveBackground() {
+      // During each frame, update the background position
       currentFrame++;
       display.background.setX(Math.round((target.x - start.x) * currentFrame / totalFrames + start.x));
       display.background.setY(Math.round((target.y - start.y) * currentFrame / totalFrames + start.y));
       display.backgroundLayer.draw();
+
       if (currentFrame == totalFrames) {
+        // Last frame
         viewPixels.x = target.x;
         viewPixels.y = target.y;
         clearInterval(movingIntervalId);
         moving = false;
 
-        // Update the tile buffer
+        // Update the tile buffer (at a later time, so we don't cause lag for the last frame)
         setTimeout(function() {
           loadView(view.x, view.y);
         }, 50);
@@ -309,7 +315,7 @@ function MapManager(display, input) {
       }
     };
 
-    movingIntervalId = setInterval(moveBackground, frameRate);
+    movingIntervalId = setInterval(moveBackground, 1000 / frameRate);
   }
 
   /*============================= INITIALISE =================================*/
