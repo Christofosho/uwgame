@@ -265,11 +265,11 @@ function MapManager(display, input) {
         moving = false;
 
         // Continue moving
-        if (input.getInputState(direction).pressed) shiftView(direction);
-        else if (input.getInputState(INPUT.UP).pressed) shiftView(DIRECTION.UP);
-        else if (input.getInputState(INPUT.DOWN).pressed) shiftView(DIRECTION.DOWN);
-        else if (input.getInputState(INPUT.LEFT).pressed) shiftView(DIRECTION.LEFT);
-        else if (input.getInputState(INPUT.RIGHT).pressed) shiftView(DIRECTION.RIGHT);
+        /*if (input.inputStates[direction].pressed) { shiftView(direction); }
+        else if (input.inputStates[INPUT.UP].pressed) { shiftView(DIRECTION.UP); }
+        else if (input.inputStates[INPUT.DOWN].pressed) { shiftView(DIRECTION.DOWN); }
+        else if (input.inputStates[INPUT.LEFT].pressed) { shiftView(DIRECTION.LEFT); }
+        else if (input.inputStates[INPUT.RIGHT].pressed) { shiftView(DIRECTION.RIGHT); }*/
       }
     };
 
