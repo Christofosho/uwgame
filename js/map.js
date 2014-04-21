@@ -49,6 +49,13 @@ function MapManager(display, input) {
   hiddenViewCanvas.height = "1000";
   var hiddenViewCtx = hiddenViewCanvas.getContext("2d");
 
+  // Background image
+  var backgroundImage = new Image();
+  backgroundImage.onload = function() {
+    display.background.setImage(backgroundImage);
+    display.backgroundLayer.draw();
+  };
+
   /*============================= FUNCTIONS ==================================*/
   // Load a new map file
   function loadMap(url, x, y) {
@@ -166,12 +173,9 @@ function MapManager(display, input) {
       (view.width + TILE_BUFFER_SIZE * 2) * tileSizePixels.width,
       (view.height + TILE_BUFFER_SIZE * 2) * tileSizePixels.height);
     hiddenViewCtx.putImageData(imageData, 0, 0);
-    var backgroundImage = new Image();
     backgroundImage.src = hiddenViewCanvas.toDataURL();
     display.background.setX(-TILE_BUFFER_SIZE * tileSizePixels.width);
     display.background.setY(-TILE_BUFFER_SIZE * tileSizePixels.height);
-    display.background.setImage(backgroundImage);
-    display.backgroundLayer.draw();
   }
 
   // Reload the tile at x, y - create if necessary
