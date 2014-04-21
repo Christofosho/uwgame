@@ -2,7 +2,7 @@ function MapManager(display, input) {
   /*============================= VARIABLES ==================================*/
   // Keep track of whether the map is currently moving
   var moving = false;
-  var movingFunctionId = null;
+  var movingIntervalId;
 
   // Map coordinates of the view. Indicates which tiles are currently in the view.
   var view = { x: 0, y: 0, width: null, height: null };
@@ -217,28 +217,29 @@ function MapManager(display, input) {
       return;
     }
     moving = true;
+    var vector = { x: 0, y: 0 };
     switch (direction) {
       case DIRECTION.LEFT:
-        view.x--;
         leftColX--;
+        vector.x--;
         leftColI = (leftColI - 1 + tileBufferArray.length) % tileBufferArray.length;
         var newColX = leftColX;
         break;
       case DIRECTION.RIGHT:
-        view.x++;
         leftColX++;
+        vector.x++;
         leftColI = (leftColI + 1) % tileBufferArray.length;
         var newColX = leftColX + tileBufferArray.length - 1;
         break;
       case DIRECTION.DOWN:
-        view.y++;
         topRowY++;
+        vector.y++;
         topRowJ = (topRowJ + 1) % tileBufferArray.length;
         var newRowY = topRowY + tileBufferArray[0].length - 1;
         break;
       case DIRECTION.UP:
-        view.y--;
         topRowY--;
+        vector.y--;
         topRowJ = (topRowJ - 1 + tileBufferArray.length) % tileBufferArray.length;
         var newRowY = topRowY;
         var x;
@@ -265,28 +266,35 @@ function MapManager(display, input) {
     tempCtx.putImageData(imageData, 0, 0);
     var backgroundImage = new Image();
     backgroundImage.src = tempCanvas.toDataURL();
+    var start = {
+      x: -TILE_BUFFER_SIZE * tileSizePixels.width,
+      y: -TILE_BUFFER_SIZE * tileSizePixels.height
+    };
+    display.background2.setX(start.x);
+    display.background2.setY(start.y);
     display.background2.setImage(backgroundImage);
+
+    view.x += vector.x;
+    view.y += vector.y;
 
     var duration = 300; // milliseconds
     var frameRate = 30; // fps
     var totalFrames = duration / frameRate;
     var target = {
-      x: -view.x * tileSizePixels.width,
-      y: -view.y * tileSizePixels.height
+      x: (-TILE_BUFFER_SIZE - vector.x) * tileSizePixels.width,
+      y: (-TILE_BUFFER_SIZE - vector.y) * tileSizePixels.height
     };
     var currentFrame = 0;
 
-    function movingFunction() {
-      var now = new Date();
-      console.info(now.getMilliseconds());
+    function moveBackground() {
       currentFrame++;
-      display.background.setX(Math.round((target.x - viewPixels.x) * currentFrame / totalFrames) + viewPixels.x);
-      display.background.setY(Math.round((target.y - viewPixels.y) * currentFrame / totalFrames) + viewPixels.y);
+      display.background2.setX(Math.round((target.x - start.x) * currentFrame / totalFrames + start.x));
+      display.background2.setY(Math.round((target.y - start.y) * currentFrame / totalFrames + start.y));
       display.backgroundLayer.draw();
       if (currentFrame == totalFrames) {
         viewPixels.x = target.x;
         viewPixels.y = target.y;
-        clearInterval(movingFunctionId);
+        clearInterval(movingIntervalId);
         moving = false;
 
         // Continue moving
@@ -298,7 +306,7 @@ function MapManager(display, input) {
       }
     };
 
-    movingFunctionId = setInterval(movingFunction, frameRate);
+    movingIntervalId = setInterval(moveBackground, frameRate);
   }
 
   /*============================= INITIALISE =================================*/
