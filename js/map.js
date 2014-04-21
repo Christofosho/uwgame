@@ -282,18 +282,15 @@ function MapManager(display, input) {
   // TODO: make image path part of config?
   emptyTileImage.src = "img/empty.png";
 
-  var inputEventPress = {};
-  inputEventPress[INPUT.UP] = function() { shiftView(DIRECTION.UP) };
-  inputEventPress[INPUT.DOWN] = function() { shiftView(DIRECTION.DOWN) };
-  inputEventPress[INPUT.LEFT] = function() { shiftView(DIRECTION.LEFT) };
-  inputEventPress[INPUT.RIGHT] = function() { shiftView(DIRECTION.RIGHT) };
-
-  /*=========================== GET/SET FUNCTIONS ============================*/
-  function getInputEventPress() { return inputEventPress; }
+  var inputEventHandlers = {};
+  inputEventHandlers[INPUT.UP] = function() { shiftView(DIRECTION.UP) };
+  inputEventHandlers[INPUT.DOWN] = function() { shiftView(DIRECTION.DOWN) };
+  inputEventHandlers[INPUT.LEFT] = function() { shiftView(DIRECTION.LEFT) };
+  inputEventHandlers[INPUT.RIGHT] = function() { shiftView(DIRECTION.RIGHT) };
 
   return {
     loadMap: loadMap,
     loadView: loadView,
-    getInputEventPress: getInputEventPress
+    inputEventHandlers: inputEventHandlers
   };
 }

@@ -105,8 +105,7 @@ function DisplayManager(stageSizePixels) {
     npcLayer: npcLayer,
     playerLayer: playerLayer,
     menuLayer: menuLayer,
-    background: background,
-
+    background: background
   };
 }
 
