@@ -157,8 +157,17 @@ function MapManager(display, input) {
       }
     }
 
-    display.background.setX(viewPixels.x);
-    display.background.setY(viewPixels.y);
+    var imageData = hiddenCtx.getImageData(
+      leftColX * tileSizePixels.width,
+      topRowY * tileSizePixels.height,
+      (view.width + TILE_BUFFER_SIZE * 2) * tileSizePixels.width,
+      (view.height + TILE_BUFFER_SIZE * 2) * tileSizePixels.height);
+    tempCtx.putImageData(imageData, 0, 0);
+    var backgroundImage = new Image();
+    backgroundImage.src = tempCanvas.toDataURL();
+    display.background.setX(-TILE_BUFFER_SIZE * tileSizePixels.width);
+    display.background.setY(-TILE_BUFFER_SIZE * tileSizePixels.height);
+    display.background.setImage(backgroundImage);
     display.backgroundLayer.draw();
   }
 
@@ -204,8 +213,7 @@ function MapManager(display, input) {
     tile.setX(x * tileSizePixels.width);
     tile.setY(y * tileSizePixels.height);
 
-    var pos = { x: tile.getX(), y: tile.getY() };
-    hiddenCtx.drawImage(tileImage, pos.x, pos.y);
+    hiddenCtx.drawImage(tileImage, tile.getX(), tile.getY());
   }
 
   /* Shift buffer to tiles one over, reload the new tiles
@@ -248,6 +256,9 @@ function MapManager(display, input) {
         return;
     }
 
+    view.x += vector.x;
+    view.y += vector.y;
+
     if (newColX !== undefined) {
       for (var y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
         loadTile(newColX, y);
@@ -258,24 +269,11 @@ function MapManager(display, input) {
         loadTile(x, newRowY);
       }
     }
-    var imageData = hiddenCtx.getImageData(
-      (view.x - TILE_BUFFER_SIZE) * tileSizePixels.width,
-      (view.y - TILE_BUFFER_SIZE) * tileSizePixels.height,
-      (view.width + TILE_BUFFER_SIZE * 2) * tileSizePixels.width,
-      (view.height + TILE_BUFFER_SIZE * 2) * tileSizePixels.height);
-    tempCtx.putImageData(imageData, 0, 0);
-    var backgroundImage = new Image();
-    backgroundImage.src = tempCanvas.toDataURL();
+
     var start = {
       x: -TILE_BUFFER_SIZE * tileSizePixels.width,
       y: -TILE_BUFFER_SIZE * tileSizePixels.height
     };
-    display.background2.setX(start.x);
-    display.background2.setY(start.y);
-    display.background2.setImage(backgroundImage);
-
-    view.x += vector.x;
-    view.y += vector.y;
 
     var duration = 300; // milliseconds
     var frameRate = 30; // fps
@@ -288,14 +286,19 @@ function MapManager(display, input) {
 
     function moveBackground() {
       currentFrame++;
-      display.background2.setX(Math.round((target.x - start.x) * currentFrame / totalFrames + start.x));
-      display.background2.setY(Math.round((target.y - start.y) * currentFrame / totalFrames + start.y));
+      display.background.setX(Math.round((target.x - start.x) * currentFrame / totalFrames + start.x));
+      display.background.setY(Math.round((target.y - start.y) * currentFrame / totalFrames + start.y));
       display.backgroundLayer.draw();
       if (currentFrame == totalFrames) {
         viewPixels.x = target.x;
         viewPixels.y = target.y;
         clearInterval(movingIntervalId);
         moving = false;
+
+        // Update the tile buffer
+        setTimeout(function() {
+          loadView(view.x, view.y);
+        }, 50);
 
         // Continue moving
         if (input.getInputState(direction).pressed) shiftView(direction);

@@ -33,12 +33,9 @@ function DisplayManager(windowSizePixels) {
   this.playerLayer = new Kinetic.Layer();
   this.menuLayer = new Kinetic.Layer();
 
-  // Create background group
-  //this.background = new Kinetic.Group({ x: 0, y: 0 });
+  // Create container for background image (the image will be set by the map manager)
   this.background = new Kinetic.Image({ x: 0, y: 0 });
   this.backgroundLayer.add(this.background);
-  this.background2 = new Kinetic.Image({ x: 0, y: 0 });
-  this.backgroundLayer.add(this.background2);
 
   // TODO: move somewhere else - possibly a player manager?
   /*
