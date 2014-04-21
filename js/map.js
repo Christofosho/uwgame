@@ -36,6 +36,18 @@ function MapManager(display, input) {
   // Map (loaded from the Tiled JSON file)
   var map = null;
 
+  // A hidden canvas used for image operations, such as combining background tiles into one big image
+  var hiddenCanvas = document.createElement("canvas");
+  hiddenCanvas.width = "10000";
+  hiddenCanvas.height = "10000";
+  var hiddenCtx = hiddenCanvas.getContext("2d");
+
+  var tempCanvas = document.createElement("canvas");
+  tempCanvas.style.border = "black 1px solid";
+  tempCanvas.width = "1000";
+  tempCanvas.height = "1000";
+  var tempCtx = tempCanvas.getContext("2d");
+
   /*============================= FUNCTIONS ==================================*/
   // Load a new map file
   function loadMap(url, x, y) {
@@ -88,13 +100,12 @@ function MapManager(display, input) {
   function loadTileSets(nextFun) {
     tileSetImages = new Array(map.tilesets.length);
 
-    var i;
-    for (i in map.tilesets) {
+    for (var i in map.tilesets) {
       tileSetImages[i] = new Image();
       tileSetImages[i].onload = function() {
         // Check if all tilSetImages are loaded:
-        var j, complete = true;
-        for (j in tileSetImages) {
+        var complete = true;
+        for (var j in tileSetImages) {
           if (!tileSetImages[j].complete) {
             complete = false;
           }
@@ -110,14 +121,12 @@ function MapManager(display, input) {
 
   // Crop all the tileset images to the individual tile images
   function makeTileImages() {
-    var tileset_i;
-    for (tileset_i in tileSetImages) {
+    for (var tileset_i in tileSetImages) {
       var tileset = map.tilesets[tileset_i];
       var nperrow = Math.floor(tileset.imagewidth / tileset.tilewidth);
       var totaln = nperrow * Math.floor(tileset.imageheight / tileset.tileheight);
 
-      var i;
-      for (i = 0; i < totaln; i++) {
+      for (var i = 0; i < totaln; i++) {
         // Define crop rectangle
         var rect = {
           left: (i % nperrow) * tileset.tilewidth,
@@ -142,9 +151,8 @@ function MapManager(display, input) {
     leftColX = view.x - TILE_BUFFER_SIZE;
     topRowJ = 0;
     topRowY = view.y - TILE_BUFFER_SIZE;
-    var x, y;
-    for (x = leftColX; x < leftColX + tileBufferArray.length; x++) {
-      for (y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
+    for (var x = leftColX; x < leftColX + tileBufferArray.length; x++) {
+      for (var y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
         loadTile(x, y);
       }
     }
@@ -171,7 +179,7 @@ function MapManager(display, input) {
     if (tile === undefined) {
       tile = new Kinetic.Image();
       tileBufferArray[i][j] = tile;
-      display.background.add(tile);
+      //display.background.add(tile);
     }
 
     // tileNumber
@@ -185,13 +193,19 @@ function MapManager(display, input) {
     }
 
     // Set the tile properties
+    var tileImage;
     if (tileImages[tileNumber]) {
-      tile.setImage(tileImages[tileNumber]);
+      tileImage = new Image();
+      tileImage.src = tileImages[tileNumber].toDataURL();
     } else {
-      tile.setImage(emptyTileImage);
+      tileImage = emptyTileImage;
     }
-    tile.x(x * tileSizePixels.width);
-    tile.y(y * tileSizePixels.height);
+    tile.setImage(tileImage);
+    tile.setX(x * tileSizePixels.width);
+    tile.setY(y * tileSizePixels.height);
+
+    var pos = { x: tile.getX(), y: tile.getY() };
+    hiddenCtx.drawImage(tileImage, pos.x, pos.y);
   }
 
   /* Shift buffer to tiles one over, reload the new tiles
@@ -234,34 +248,45 @@ function MapManager(display, input) {
     }
 
     if (newColX !== undefined) {
-      var y;
-      for (y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
+      for (var y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
         loadTile(newColX, y);
       }
     }
     if (newRowY !== undefined) {
-      var x;
-      for (x = leftColX; x < leftColX + tileBufferArray.length; x++) {
+      for (var x = leftColX; x < leftColX + tileBufferArray.length; x++) {
         loadTile(x, newRowY);
       }
     }
+    var imageData = hiddenCtx.getImageData(
+      (view.x - TILE_BUFFER_SIZE) * tileSizePixels.width,
+      (view.y - TILE_BUFFER_SIZE) * tileSizePixels.height,
+      (view.width + TILE_BUFFER_SIZE * 2) * tileSizePixels.width,
+      (view.height + TILE_BUFFER_SIZE * 2) * tileSizePixels.height);
+    tempCtx.putImageData(imageData, 0, 0);
+    var backgroundImage = new Image();
+    backgroundImage.src = tempCanvas.toDataURL();
+    display.background2.setImage(backgroundImage);
 
-    var N = 4;
+    var duration = 300; // milliseconds
+    var frameRate = 30; // fps
+    var totalFrames = duration / frameRate;
     var target = {
       x: -view.x * tileSizePixels.width,
       y: -view.y * tileSizePixels.height
     };
-    var n = 0;
+    var currentFrame = 0;
 
     function movingFunction() {
-      n++;
-      display.background.setX(Math.round((target.x - viewPixels.x) * n / N) + viewPixels.x);
-      display.background.setY(Math.round((target.y - viewPixels.y) * n / N) + viewPixels.y);
+      var now = new Date();
+      console.info(now.getMilliseconds());
+      currentFrame++;
+      display.background.setX(Math.round((target.x - viewPixels.x) * currentFrame / totalFrames) + viewPixels.x);
+      display.background.setY(Math.round((target.y - viewPixels.y) * currentFrame / totalFrames) + viewPixels.y);
       display.backgroundLayer.draw();
-      if (n == N) {
+      if (currentFrame == totalFrames) {
         viewPixels.x = target.x;
         viewPixels.y = target.y;
-        window.clearInterval(movingFunctionId);
+        clearInterval(movingFunctionId);
         moving = false;
 
         // Continue moving
@@ -273,7 +298,7 @@ function MapManager(display, input) {
       }
     };
 
-    movingFunctionId = window.setInterval(movingFunction, 30);
+    movingFunctionId = setInterval(movingFunction, frameRate);
   }
 
   /*============================= INITIALISE =================================*/
