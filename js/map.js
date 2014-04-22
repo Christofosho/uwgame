@@ -22,6 +22,10 @@ function MapManager(display, input) {
   // Number of extra tiles each side of the view to load
   var TILE_BUFFER_SIZE = 18;
 
+  // Number of tiles that the view must be from the edge of the tile buffer
+  // before it will try to reload the background
+  var BG_RELOAD_THRESHOLD = 9;
+
   // Tile IDs for the background layer
   var bgLayer = null;
 
@@ -278,11 +282,16 @@ function MapManager(display, input) {
         } else if (input.getInputState(INPUT.RIGHT).pressed) {
           shiftView(DIRECTION.RIGHT);
         } else {
-          // Player has stopped moving.
-          // Update the tile buffer (at a later time, so we don't cause lag for the last frame)
-          setTimeout(function() {
-            loadBackgroundView();
-          }, 50);
+          // Player has stopped moving. If the view is currently within the
+          // reload threshold, update the background image.
+          if (view.x - backgroundView.x < BG_RELOAD_THRESHOLD ||
+              view.y - backgroundView.y < BG_RELOAD_THRESHOLD ||
+              backgroundView.x + backgroundView.width - view.x - view.width < BG_RELOAD_THRESHOLD ||
+              backgroundView.y + backgroundView.height - view.y - view.height < BG_RELOAD_THRESHOLD) {
+            // Reload the background at a later time, so we don't cause lag for
+            // the last animation frame
+            setTimeout(loadBackgroundView);
+          }
         }
       }
     });
