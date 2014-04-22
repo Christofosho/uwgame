@@ -103,7 +103,7 @@ function MapManager(display, input) {
   }
 
   // Load tileset images
-  function loadTileSets(nextFun) {
+  function loadTileSets(onComplete) {
     tileSetImages = new Array(map.tilesets.length);
 
     for (var i in map.tilesets) {
@@ -116,8 +116,8 @@ function MapManager(display, input) {
             complete = false;
           }
         }
-        if (complete && nextFun) {
-          nextFun();
+        if (complete && onComplete) {
+          onComplete();
         }
       };
       // TODO: make the path configurable?
@@ -217,30 +217,26 @@ function MapManager(display, input) {
       return;
     }
     moving = true;
-    var vector = { x: 0, y: 0 };
     switch (direction) {
       case DIRECTION.LEFT:
-        vector.x--;
-        var newColX = view.x - 1;
+        view.x--;
+        var newColX = view.x;
         break;
       case DIRECTION.RIGHT:
-        vector.x++;
-        var newColX = view.x + view.width;
+        view.x++;
+        var newColX = view.x + view.width - 1;
         break;
       case DIRECTION.DOWN:
-        vector.y++;
-        var newRowY = view.y + view.height;
+        view.y++;
+        var newRowY = view.y + view.height - 1;
         break;
       case DIRECTION.UP:
-        vector.y--;
-        var newRowY = view.y - 1;
+        view.y--;
+        var newRowY = view.y;
         break;
       default:
         return;
     }
-
-    view.x += vector.x;
-    view.y += vector.y;
 
     // Reload the background view here ONLY if we have to. This is a slow process so it's
     // better to do this when the player is not moving, if we get a chance.
@@ -250,41 +246,27 @@ function MapManager(display, input) {
       loadBackgroundView();
     }
 
-    var duration = 300; // milliseconds
-    var frameRate = 30; // frames per second (fps)
-    var totalFrames = duration / frameRate;
-    var start = {
-      x: (backgroundView.x - view.x + vector.x) * tileSizePixels.width,
-      y: (backgroundView.y - view.y + vector.y) * tileSizePixels.height
-    };
-    var target = {
+    var tween = new Kinetic.Tween({
+      node: display.background,
+      duration: 0.3, // seconds
       x: (backgroundView.x - view.x) * tileSizePixels.width,
-      y: (backgroundView.y - view.y) * tileSizePixels.height
-    };
-    var currentFrame = 0;
+      y: (backgroundView.y - view.y) * tileSizePixels.height,
 
-    // Use a custom tween function to move the background, since the KineticJS tween causes problems due to
-    // placing images on 1/2 pixels.
-    // TODO: maybe we can go back to Kinetic.Tween since the background is one whole image again.
-    function moveBackground() {
-      // During each frame, update the background position
-      currentFrame++;
-      display.background.setX(Math.round((target.x - start.x) * currentFrame / totalFrames + start.x));
-      display.background.setY(Math.round((target.y - start.y) * currentFrame / totalFrames + start.y));
-      display.backgroundLayer.draw();
-
-      if (currentFrame == totalFrames) {
-        // Last frame
-        clearInterval(movingIntervalId);
+      onFinish: function() {
         moving = false;
 
-        // Continue moving
-        if (input.getInputState(direction).pressed) shiftView(direction);
-        else if (input.getInputState(INPUT.UP).pressed) shiftView(DIRECTION.UP);
-        else if (input.getInputState(INPUT.DOWN).pressed) shiftView(DIRECTION.DOWN);
-        else if (input.getInputState(INPUT.LEFT).pressed) shiftView(DIRECTION.LEFT);
-        else if (input.getInputState(INPUT.RIGHT).pressed) shiftView(DIRECTION.RIGHT);
-        else {
+        // Continue moving if a key is pressed
+        if (input.getInputState(direction).pressed) {
+          shiftView(direction);
+        } else if (input.getInputState(INPUT.UP).pressed) {
+          shiftView(DIRECTION.UP);
+        } else if (input.getInputState(INPUT.DOWN).pressed) {
+          shiftView(DIRECTION.DOWN);
+        } else if (input.getInputState(INPUT.LEFT).pressed) {
+          shiftView(DIRECTION.LEFT);
+        } else if (input.getInputState(INPUT.RIGHT).pressed) {
+          shiftView(DIRECTION.RIGHT);
+        } else {
           // Player has stopped moving.
           // Update the tile buffer (at a later time, so we don't cause lag for the last frame)
           setTimeout(function() {
@@ -292,9 +274,8 @@ function MapManager(display, input) {
           }, 50);
         }
       }
-    };
-
-    movingIntervalId = setInterval(moveBackground, 1000 / frameRate);
+    });
+    tween.play();
   }
 
   /*============================= INITIALISE =================================*/
