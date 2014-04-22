@@ -19,7 +19,7 @@
 function DisplayManager(stageSizePixels) {
 
   if (!stageSizePixels)
-    stageSizePixels = { width: 540, height: 540 };
+    stageSizePixels = { width: 510, height: 510 };
 
   var eventListeners = {};
   eventListeners[DisplayManager.MOVE_COMPLETE] = [];
