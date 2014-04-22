@@ -39,12 +39,14 @@ function MapManager(display, input) {
   var hiddenViewCanvas = document.createElement("canvas");
   var hiddenViewCtx = hiddenViewCanvas.getContext("2d");
 
-  // Background image
-  var backgroundImage = new Image();
-  backgroundImage.onload = function() {
-    display.background.setImage(backgroundImage);
-    display.backgroundLayer.draw();
-  };
+  // Create container for background image.
+  // Create a group with a single image inside of it.
+  // The purpose of the group is to allow us to shift the image within it in the middle of an animation
+  // (This may happen if a new background image is loaded while the player is moving)
+  var backgroundGroup = new Kinetic.Group({ x: 0, y: 0 });
+  var background = new Kinetic.Image({ x: 0, y: 0 });
+  backgroundGroup.add(background);
+  display.backgroundLayer.add(backgroundGroup);
 
   /*============================= FUNCTIONS ==================================*/
   // Load a new map file
@@ -60,7 +62,6 @@ function MapManager(display, input) {
       loadTileSets(function() {
         makeTileImages();
         loadView(x, y);
-        display.backgroundLayer.draw();
       });
     });
   }
@@ -95,7 +96,7 @@ function MapManager(display, input) {
     hiddenViewCanvas.width = backgroundView.width * tileSizePixels.width;
     hiddenViewCanvas.height = backgroundView.height * tileSizePixels.height;
 
-    // Create an empty tile image array
+    // Create an empty tile image array (will be filled with images after they are loaded)
     tilesLoaded = new Array(bgLayer.width);
     for (var i = 0; i < tilesLoaded.length; i++) {
       tilesLoaded[i] = new Array(bgLayer.height);
@@ -152,6 +153,8 @@ function MapManager(display, input) {
     // Set view
     view.x = x;
     view.y = y;
+    backgroundGroup.setX(-view.x * tileSizePixels.width);
+    backgroundGroup.setY(-view.y * tileSizePixels.height);
     loadBackgroundView();
   }
 
@@ -171,12 +174,23 @@ function MapManager(display, input) {
       backgroundView.width * tileSizePixels.width,
       backgroundView.height * tileSizePixels.height);
     hiddenViewCtx.putImageData(imageData, 0, 0);
+
+    var backgroundImage = new Image();
+    backgroundImage.onload = function() {
+      background.setImage(backgroundImage);
+      background.setX(backgroundView.x * tileSizePixels.width);
+      background.setY(backgroundView.y * tileSizePixels.height);
+      // Only redraw if the map is not moving.
+      // (If it is moving, it will get redrawn automatically)
+      if (!moving) {
+        display.backgroundLayer.draw();
+      }
+    };
+    // Set the "src" of the image to a string containing the image data (instead of an actual URL)
     backgroundImage.src = hiddenViewCanvas.toDataURL();
-    display.background.setX(-TILE_BUFFER_SIZE * tileSizePixels.width);
-    display.background.setY(-TILE_BUFFER_SIZE * tileSizePixels.height);
   }
 
-  // Reload the tile at x, y - create if necessary
+  // Load the tile at x, y if it hasn't been loaded already
   function loadTile(x, y) {
     if (x < 0 || x >= bgLayer.width || y < 0 || y >= bgLayer.height) {
       console.warn("Attempt to create tile out of bounds");
@@ -208,10 +222,7 @@ function MapManager(display, input) {
     }
   }
 
-  /* Shift buffer to tiles one over, reload the new tiles
-     Does not move the screen
-     Does now redraw the screen
-   */
+  // Moves the background by 1 tile in the specified direction. Will also reload the background image if necessary.
   function shiftView(direction) {
     if (moving) {
       return;
@@ -247,10 +258,10 @@ function MapManager(display, input) {
     }
 
     var tween = new Kinetic.Tween({
-      node: display.background,
+      node: backgroundGroup,
       duration: 0.3, // seconds
-      x: (backgroundView.x - view.x) * tileSizePixels.width,
-      y: (backgroundView.y - view.y) * tileSizePixels.height,
+      x: -view.x * tileSizePixels.width,
+      y: -view.y * tileSizePixels.height,
 
       onFinish: function() {
         moving = false;
@@ -279,7 +290,7 @@ function MapManager(display, input) {
   }
 
   /*============================= INITIALISE =================================*/
-  // Load empty image
+  // Load an "empty" image for tiles that have no image specified
   emptyTileImage = new Image();
   // TODO: make image path part of config?
   emptyTileImage.src = "img/empty.png";
