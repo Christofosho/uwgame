@@ -1,32 +1,37 @@
+// Class: PlayerManager
+// Input: none
+function PlayerManager() {
 
-// Function used to create or load a player
-function player {
-
-    function save(player) {
-        localstorage.setItem("player", $.toJSON(player));
+    // Saves the player object to local storage
+    function savePlayer(saveData) {
+        localstorage.setItem("UWGplayer", $.toJSON(saveData));
         return;
     }
 
-    function load() {
-        var player;
-        if ( player = localstorage.getItem("player") ) {
-            player = $.secureEvalJSON(player);
+    // Loads the player object from localstorage
+    function loadPlayer() {
+        var loadedData;
+        if ( loadedData = localstorage.getItem("UWGplayer") ) {
+            loadedData = $.secureEvalJSON(loadedData);
         }
-        return player;
+        return loadedData;
     }
 
-    var coordinates = {
-        x:200,
-        y:200,
-        map:0
-    };
+    // Returns the details of the current player object
+    function playerDetails() {
 
-    var name = name;
+        return {
+            name: player.name,
+            coordinates: player.coordinates,
+            term: player.term,
+            degree: player.degree,
+            abilities: player.abilities
+        };
+    }
 
     return {
-        save: save,
-        load: load,
-        coordinates: coordinates,
-        name: name
+        save: savePlayer,
+        load: loadPlayer,
+        details: playerDetails
     };
 }
