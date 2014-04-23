@@ -16,9 +16,6 @@ function MapManager(display, input) {
   // Empty tiles image
   var emptyTileImage = null;
 
-  // A boolean array that indicates which tiles have been loaded on the hidden background canvas
-  var tilesLoaded = null;
-
   // Number of extra tiles each side of the view to load
   var TILE_BUFFER_SIZE = 18;
 
@@ -35,13 +32,9 @@ function MapManager(display, input) {
   // Map (loaded from the Tiled JSON file)
   var map = null;
 
-  // A hidden canvas used to store the entire background
+  // A hidden canvas used to draw the current view of the background
   var hiddenBackgroundCanvas = document.createElement("canvas");
   var hiddenBackgroundCtx = hiddenBackgroundCanvas.getContext("2d");
-
-  // A hidden canvas used to draw the current view of the background
-  var hiddenViewCanvas = document.createElement("canvas");
-  var hiddenViewCtx = hiddenViewCanvas.getContext("2d");
 
   // Create container for background image.
   // Create a group with a single image inside of it.
@@ -49,6 +42,11 @@ function MapManager(display, input) {
   // (This may happen if a new background image is loaded while the player is moving)
   var backgroundGroup = new Kinetic.Group({ x: 0, y: 0 });
   var background = new Kinetic.Image({ x: 0, y: 0 });
+
+  // Set the background "image" to be the hidden canvas
+  // (This works since you can pass a canvas object to ctx.drawImage())
+  background.setImage(hiddenBackgroundCanvas);
+
   backgroundGroup.add(background);
   display.backgroundLayer.add(backgroundGroup);
 
@@ -95,16 +93,8 @@ function MapManager(display, input) {
     }
 
     // Resize the hidden canvasses to make sure they are big enough
-    hiddenBackgroundCanvas.width = bgLayer.width * tileSizePixels.width;
-    hiddenBackgroundCanvas.height = bgLayer.height * tileSizePixels.height;
-    hiddenViewCanvas.width = backgroundView.width * tileSizePixels.width;
-    hiddenViewCanvas.height = backgroundView.height * tileSizePixels.height;
-
-    // Create an empty tile image array (will be filled with images after they are loaded)
-    tilesLoaded = new Array(bgLayer.width);
-    for (var i = 0; i < tilesLoaded.length; i++) {
-      tilesLoaded[i] = new Array(bgLayer.height);
-    }
+    hiddenBackgroundCanvas.width = backgroundView.width * tileSizePixels.width;
+    hiddenBackgroundCanvas.height = backgroundView.height * tileSizePixels.height;
   }
 
   // Load tileset images
@@ -169,17 +159,7 @@ function MapManager(display, input) {
         loadTile(x, y);
       }
     }
-    // Extract the image data from the hidden canvas to recreate the background image.
-    var imageData = hiddenBackgroundCtx.getImageData(
-      backgroundView.x * tileSizePixels.width,
-      backgroundView.y * tileSizePixels.height,
-      backgroundView.width * tileSizePixels.width,
-      backgroundView.height * tileSizePixels.height);
-    hiddenViewCtx.putImageData(imageData, 0, 0);
 
-    // Set the background "image" to be the hidden canvas
-    // (This works since you can pass a canvas object to ctx.drawImage!)
-    background.setImage(hiddenViewCanvas);
     background.setX(backgroundView.x * tileSizePixels.width);
     background.setY(backgroundView.y * tileSizePixels.height);
     // Only redraw if the map is not moving.
@@ -196,29 +176,26 @@ function MapManager(display, input) {
       return;
     }
 
-    if (!tilesLoaded[x][y]) {
-      var bg_index = x + y * bgLayer.width;
-      var tileID;
-      if (x >= 0 && y >= 0 && bg_index < bgLayer.data.length) {
-        tileID = bgLayer.data[bg_index];
-      } else {
-        // OOB x and y - show empty tile
-        tileID = 0;
-      }
-
-      // Grab the image using the tile ID
-      var tileImage;
-      if (tileImages[tileID]) {
-        tileImage = tileImages[tileID];
-      } else {
-        tileImage = emptyTileImage;
-      }
-
-      // Draw the image
-      hiddenBackgroundCtx.drawImage(tileImage, x * tileSizePixels.width, y * tileSizePixels.height);
-
-      tilesLoaded[x][y] = true;
+    // Determine which type of tile to use
+    var bg_index = x + y * bgLayer.width;
+    var tileID;
+    if (x >= 0 && y >= 0 && bg_index < bgLayer.data.length) {
+      tileID = bgLayer.data[bg_index];
+    } else {
+      // OOB x and y - show empty tile
+      tileID = 0;
     }
+
+    // Grab the image using the tile ID
+    var tileImage;
+    if (tileImages[tileID]) {
+      tileImage = tileImages[tileID];
+    } else {
+      tileImage = emptyTileImage;
+    }
+
+    // Draw the tile on a hidden canvas, which will later be drawn on the stage
+    hiddenBackgroundCtx.drawImage(tileImage, (x - backgroundView.x) * tileSizePixels.width, (y - backgroundView.y) * tileSizePixels.height);
   }
 
   // Moves the background by 1 tile in the specified direction. Will also reload the background image if necessary.
