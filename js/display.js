@@ -21,32 +21,6 @@ function DisplayManager(stageSizePixels) {
   if (!stageSizePixels)
     stageSizePixels = { width: 540, height: 540 };
 
-  var eventListeners = {};
-  eventListeners[DisplayManager.MOVE_COMPLETE] = [];
-
-  function addEventListener(event, listener) {
-    if (this.eventListeners[event]) {
-      this.eventListeners[event].push(listener);
-    }
-  }
-
-  function removeEventListener(event, listener) {
-    if (this.eventListeners[event]) {
-      var index = eventListeners[event].indexOf(listener);
-      if (index != -1) {
-        eventListeners[event].splice(index, 1);
-      }
-    }
-  }
-
-  function fireEvent(event) {
-    if (eventListeners[event]) {
-      for (var i = 0; i < eventListeners[event].length; i++) {
-        eventListeners[event][i]();
-      }
-    }
-  }
-
   // Loads an image from a url specified by attrs.url
   function loadImage(attrs, callback) {
     var img = new Kinetic.Image(attrs);
@@ -107,5 +81,3 @@ function DisplayManager(stageSizePixels) {
     background: background
   };
 }
-
-DisplayManager.MOVE_COMPLETE = "move_complete";
