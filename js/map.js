@@ -133,9 +133,7 @@ function MapManager(display, input) {
           width: tileset.tilewidth,
           height: tileset.tileheight
         };
-        var tileImage = new Image();
-        tileImage.src = Pixastic.process(tileSetImages[tileset_i], "crop", rect).toDataURL();
-        tileImages[tileset.firstgid + i] = tileImage;
+        tileImages[tileset.firstgid + i] = Pixastic.process(tileSetImages[tileset_i], "crop", rect);
       }
     }
   }
