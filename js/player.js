@@ -47,12 +47,12 @@ function PlayerManager(display, input) {
     
     // function to get player images
     var playerImage = $.when( makePlayerImages() );
-    playerImage.done( function() {
+    playerImage.done( function( tileImages ) {
       
       // function to create canvas
       var playerCanvas = $.when( createPlayerCanvas() );
-      playerCanvas.done( function() {
-        
+      playerCanvas.done( function( tileImages ) {
+
         // Draw the player on the map
         playerLayer.drawImage( tileImages[0], 240, 240 );
 
@@ -68,6 +68,7 @@ function PlayerManager(display, input) {
     var totaln = 14;
 
     playerBitmap = new Image();
+    playerBitmap.src = "img/playerBitmap.png";
     playerBitmap.onload = function() {
 
       // extracts each image from larger bitmap
@@ -82,9 +83,12 @@ function PlayerManager(display, input) {
         var playerTile = new Image();
         playerTile.src = Pixastic.process( playerBitmap, "crop", rect ).toDataURL();
         tileImages[i] = playerTile;
+        if ( i == 13 ) {    
+          deferred.resolve();
+        }
       }
     };
-    playerBitmap.src = "img/playerBitmap.png";
+
 
     return deferred.promise();
   }
@@ -95,7 +99,9 @@ function PlayerManager(display, input) {
 
     display.playerLayer.width = 510;
     display.playerLayer.height = 510;
-    
+
+    deferred.resolve( tileImages );
+
     return deferred.promise();
   }
 
