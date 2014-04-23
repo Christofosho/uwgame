@@ -25,13 +25,13 @@ function DisplayManager(stageSizePixels) {
   eventListeners[DisplayManager.MOVE_COMPLETE] = [];
 
   function addEventListener(event, listener) {
-    if (eventListeners[event])
-      eventListeners[event].push(listener);
+    if (this.eventListeners[event]) {
+      this.eventListeners[event].push(listener);
+    }
   }
 
   function removeEventListener(event, listener) {
-    if (eventListeners[event])
-    {
+    if (this.eventListeners[event]) {
       var index = eventListeners[event].indexOf(listener);
       if (index != -1) {
         eventListeners[event].splice(index, 1);
@@ -40,8 +40,7 @@ function DisplayManager(stageSizePixels) {
   }
 
   function fireEvent(event) {
-    if (eventListeners[event])
-    {
+    if (eventListeners[event]) {
       for (var i = 0; i < eventListeners[event].length; i++) {
         eventListeners[event][i]();
       }

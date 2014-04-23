@@ -1,14 +1,13 @@
+// map.js: Map Manager
 function MapManager(display, input) {
   /*============================= VARIABLES ==================================*/
   // Keep track of whether the map is currently moving
   var moving = false;
-  var movingFunctionId = null;
+  var movingIntervalId;
 
   // Map coordinates of the view. Indicates which tiles are currently in the view.
   var view = { x: 0, y: 0, width: null, height: null };
-
-  // Map-pixel coordinates of view
-  var viewPixels = { x: 0, y: 0 };
+  var backgroundView = { x: 0, y: 0, width: null, height: null };
 
   // Array of tileset images and individual tile images
   var tileSetImages = [];
@@ -17,17 +16,14 @@ function MapManager(display, input) {
   // Empty tiles image
   var emptyTileImage = null;
 
-  // Buffer for tiles on screen, and indexes for positions
-  var tileBufferArray = null;
-  var leftColI = null;
-  var topRowJ = null;
-  var leftColX = null;
-  var topRowY = null;
+  // Number of extra tiles each side of the view to load
+  var TILE_BUFFER_SIZE = 18;
 
-  // Number of tiles each side of the view to load
-  var TILE_BUFFER_SIZE = 1;
+  // Number of tiles that the view must be from the edge of the tile buffer
+  // before it will try to reload the background
+  var BG_RELOAD_THRESHOLD = 9;
 
-  // Layer information for background image
+  // Tile IDs for the background layer
   var bgLayer = null;
 
   // Tile size (set by map in initialiseMap)
@@ -35,6 +31,24 @@ function MapManager(display, input) {
 
   // Map (loaded from the Tiled JSON file)
   var map = null;
+
+  // A hidden canvas used to draw the current view of the background
+  var hiddenBackgroundCanvas = document.createElement("canvas");
+  var hiddenBackgroundCtx = hiddenBackgroundCanvas.getContext("2d");
+
+  // Create container for background image.
+  // Create a group with a single image inside of it.
+  // The purpose of the group is to allow us to shift the image within it in the middle of an animation
+  // (This may happen if a new background image is loaded while the player is moving)
+  var backgroundGroup = new Kinetic.Group({ x: 0, y: 0 });
+  var background = new Kinetic.Image({ x: 0, y: 0 });
+
+  // Set the background "image" to be the hidden canvas
+  // (This works since you can pass a canvas object to ctx.drawImage())
+  background.setImage(hiddenBackgroundCanvas);
+
+  backgroundGroup.add(background);
+  display.backgroundLayer.add(backgroundGroup);
 
   /*============================= FUNCTIONS ==================================*/
   // Load a new map file
@@ -50,7 +64,6 @@ function MapManager(display, input) {
       loadTileSets(function() {
         makeTileImages();
         loadView(x, y);
-        display.backgroundLayer.draw();
       });
     });
   }
@@ -63,44 +76,41 @@ function MapManager(display, input) {
     view.width = Math.ceil(display.stageSizePixels.width / tileSizePixels.width);
     view.height = Math.ceil(display.stageSizePixels.height / tileSizePixels.height);
 
+    backgroundView.x = view.x - TILE_BUFFER_SIZE;
+    backgroundView.y = view.y - TILE_BUFFER_SIZE;
+    backgroundView.width = view.width + TILE_BUFFER_SIZE * 2;
+    backgroundView.height = view.height + TILE_BUFFER_SIZE * 2;
+
     // Find the bg layer, and extract data
-    var i;
-    for (i in map.layers) {
+    for (var i in map.layers) {
       if (map.layers[i].name == "bg") {
         bgLayer = map.layers[i];
         break;
       } else if (i >= map.layers.length) {
-        console.warning("No bg layer found for map!");
+        console.error("No bg layer found for map!");
         return;
       }
     }
 
-    // Form (or reform) buffer for tiles on screen
-    tileBufferArray = new Array(view.width + TILE_BUFFER_SIZE * 2);
-    for (i = 0; i < tileBufferArray.length; i++) {
-      tileBufferArray[i] = new Array(view.height + TILE_BUFFER_SIZE * 2);
-    }
-
-    // TODO: reload player image if tilesize changed?
+    // Resize the hidden canvasses to make sure they are big enough
+    hiddenBackgroundCanvas.width = backgroundView.width * tileSizePixels.width;
+    hiddenBackgroundCanvas.height = backgroundView.height * tileSizePixels.height;
   }
 
   // Load tileset images
-  function loadTileSets(nextFun) {
+  function loadTileSets(onComplete) {
     tileSetImages = new Array(map.tilesets.length);
 
-    var i;
-    for (i in map.tilesets) {
+    // Count the number of images that have been downloaded
+    var completeCount = 0;
+
+    for (var i in map.tilesets) {
       tileSetImages[i] = new Image();
       tileSetImages[i].onload = function() {
         // Check if all tilSetImages are loaded:
-        var j, complete = true;
-        for (j in tileSetImages) {
-          if (!tileSetImages[j].complete) {
-            complete = false;
-          }
-        }
-        if (complete && nextFun) {
-          nextFun();
+        completeCount++;
+        if (completeCount == map.tilesets.length && onComplete) {
+          onComplete();
         }
       };
       // TODO: make the path configurable?
@@ -110,14 +120,12 @@ function MapManager(display, input) {
 
   // Crop all the tileset images to the individual tile images
   function makeTileImages() {
-    var tileset_i;
-    for (tileset_i in tileSetImages) {
+    for (var tileset_i in tileSetImages) {
       var tileset = map.tilesets[tileset_i];
       var nperrow = Math.floor(tileset.imagewidth / tileset.tilewidth);
       var totaln = nperrow * Math.floor(tileset.imageheight / tileset.tileheight);
 
-      var i;
-      for (i = 0; i < totaln; i++) {
+      for (var i = 0; i < totaln; i++) {
         // Define crop rectangle
         var rect = {
           left: (i % nperrow) * tileset.tilewidth,
@@ -135,69 +143,60 @@ function MapManager(display, input) {
     // Set view
     view.x = x;
     view.y = y;
-    viewPixels.x = -view.x * tileSizePixels.width;
-    viewPixels.y = -view.y * tileSizePixels.height;
+    backgroundGroup.setX(-view.x * tileSizePixels.width);
+    backgroundGroup.setY(-view.y * tileSizePixels.height);
+    loadBackgroundView();
+  }
 
-    leftColI = 0;
-    leftColX = view.x - TILE_BUFFER_SIZE;
-    topRowJ = 0;
-    topRowY = view.y - TILE_BUFFER_SIZE;
-    var x, y;
-    for (x = leftColX; x < leftColX + tileBufferArray.length; x++) {
-      for (y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
+  function loadBackgroundView() {
+    // Ensure that the necessary background images have loaded
+    backgroundView.x = view.x - TILE_BUFFER_SIZE;
+    backgroundView.y = view.y - TILE_BUFFER_SIZE;
+    for (var x = backgroundView.x; x < backgroundView.x + backgroundView.width; x++) {
+      for (var y = backgroundView.y; y < backgroundView.y + backgroundView.height; y++) {
         loadTile(x, y);
       }
     }
 
-    display.background.setX(viewPixels.x);
-    display.background.setY(viewPixels.y);
-    display.backgroundLayer.draw();
+    background.setX(backgroundView.x * tileSizePixels.width);
+    background.setY(backgroundView.y * tileSizePixels.height);
+    // Only redraw if the map is not moving.
+    // (If it is moving, it will get redrawn automatically)
+    if (!moving) {
+      display.backgroundLayer.draw();
+    }
   }
 
-  // Reload the tile at x, y - create if necessary
+  // Load the tile at x, y if it hasn't been loaded already
   function loadTile(x, y) {
-    if (x < leftColX || x >= leftColX + tileBufferArray.length ||
-       y < topRowY || y >= topRowY + tileBufferArray[0].length) {
-      console.warning("Attempt to create tile OOB of tileBufferArray");
+    if (x < 0 || x >= bgLayer.width || y < 0 || y >= bgLayer.height) {
+      console.warn("Attempt to create tile out of bounds");
       return;
     }
 
-    // tileBufferArray indexes
-    var i = (x - leftColX + leftColI) % tileBufferArray.length;
-    var j = (y - topRowY + topRowJ) % tileBufferArray[0].length;
-
-    // Ensure tile exists
-    var tile = tileBufferArray[i][j];
-    if (tile === undefined) {
-      tile = new Kinetic.Image();
-      tileBufferArray[i][j] = tile;
-      display.background.add(tile);
-    }
-
-    // tileNumber
+    // Determine which type of tile to use
     var bg_index = x + y * bgLayer.width;
-    var tileNumber
+    var tileID;
     if (x >= 0 && y >= 0 && bg_index < bgLayer.data.length) {
-      tileNumber = bgLayer.data[bg_index];
+      tileID = bgLayer.data[bg_index];
     } else {
       // OOB x and y - show empty tile
-      tileNumber = 0;
+      tileID = 0;
     }
 
-    // Set the tile properties
-    if (tileImages[tileNumber]) {
-      tile.setImage(tileImages[tileNumber]);
+    // Grab the image using the tile ID
+    var tileImage;
+    if (tileImages[tileID]) {
+      tileImage = tileImages[tileID];
     } else {
-      tile.setImage(emptyTileImage);
+      tileImage = emptyTileImage;
     }
-    tile.x(x * tileSizePixels.width);
-    tile.y(y * tileSizePixels.height);
+
+    // Draw the tile on a hidden canvas, which will later be drawn on the stage
+    hiddenBackgroundCtx.drawImage(tileImage, (x - backgroundView.x) * tileSizePixels.width, (y - backgroundView.y) * tileSizePixels.height);
   }
 
-  /* Shift buffer to tiles one over, reload the new tiles
-     Does not move the screen
-     Does now redraw the screen
-   */
+  // Moves the background by 1 tile in the specified direction. Will also reload the background image if necessary.
   function shiftView(direction) {
     if (moving) {
       return;
@@ -206,78 +205,71 @@ function MapManager(display, input) {
     switch (direction) {
       case DIRECTION.LEFT:
         view.x--;
-        leftColX--;
-        leftColI = (leftColI - 1 + tileBufferArray.length) % tileBufferArray.length;
-        var newColX = leftColX;
+        var newColX = view.x;
         break;
       case DIRECTION.RIGHT:
         view.x++;
-        leftColX++;
-        leftColI = (leftColI + 1) % tileBufferArray.length;
-        var newColX = leftColX + tileBufferArray.length - 1;
+        var newColX = view.x + view.width - 1;
         break;
       case DIRECTION.DOWN:
         view.y++;
-        topRowY++;
-        topRowJ = (topRowJ + 1) % tileBufferArray.length;
-        var newRowY = topRowY + tileBufferArray[0].length - 1;
+        var newRowY = view.y + view.height - 1;
         break;
       case DIRECTION.UP:
         view.y--;
-        topRowY--;
-        topRowJ = (topRowJ - 1 + tileBufferArray.length) % tileBufferArray.length;
-        var newRowY = topRowY;
-        var x;
+        var newRowY = view.y;
         break;
       default:
         return;
     }
 
-    if (newColX !== undefined) {
-      var y;
-      for (y = topRowY; y < topRowY + tileBufferArray[0].length; y++) {
-        loadTile(newColX, y);
-      }
-    }
-    if (newRowY !== undefined) {
-      var x;
-      for (x = leftColX; x < leftColX + tileBufferArray.length; x++) {
-        loadTile(x, newRowY);
-      }
+    // Reload the background view here ONLY if we have to. This is a slow process so it's
+    // better to do this when the player is not moving, if we get a chance.
+    // This code should only run if the player runs in the same direction for a while without stopping.
+    if ((newColX !== undefined && (newColX < backgroundView.x || newColX >= backgroundView.x + backgroundView.width))
+       || (newRowY !== undefined && (newRowY < backgroundView.y || newRowY >= backgroundView.y + backgroundView.height))) {
+      loadBackgroundView();
     }
 
-    var N = 4;
-    var target = {
+    var tween = new Kinetic.Tween({
+      node: backgroundGroup,
+      duration: 0.3, // seconds
       x: -view.x * tileSizePixels.width,
-      y: -view.y * tileSizePixels.height
-    };
-    var n = 0;
+      y: -view.y * tileSizePixels.height,
 
-    function movingFunction() {
-      n++;
-      display.background.setX(Math.round((target.x - viewPixels.x) * n / N) + viewPixels.x);
-      display.background.setY(Math.round((target.y - viewPixels.y) * n / N) + viewPixels.y);
-      display.backgroundLayer.draw();
-      if (n == N) {
-        viewPixels.x = target.x;
-        viewPixels.y = target.y;
-        window.clearInterval(movingFunctionId);
+      onFinish: function() {
         moving = false;
 
-        // Continue moving
-        /*if (input.inputStates[direction].pressed) { shiftView(direction); }
-        else if (input.inputStates[INPUT.UP].pressed) { shiftView(DIRECTION.UP); }
-        else if (input.inputStates[INPUT.DOWN].pressed) { shiftView(DIRECTION.DOWN); }
-        else if (input.inputStates[INPUT.LEFT].pressed) { shiftView(DIRECTION.LEFT); }
-        else if (input.inputStates[INPUT.RIGHT].pressed) { shiftView(DIRECTION.RIGHT); }*/
+        // Continue moving if a key is pressed
+        if (input.inputStates[direction].pressed) {
+          shiftView(direction);
+        } else if (input.inputStates[INPUT.UP].pressed) {
+          shiftView(DIRECTION.UP);
+        } else if (input.inputStates[INPUT.DOWN].pressed) {
+          shiftView(DIRECTION.DOWN);
+        } else if (input.inputStates[INPUT.LEFT].pressed) {
+          shiftView(DIRECTION.LEFT);
+        } else if (input.inputStates[INPUT.RIGHT].pressed) {
+          shiftView(DIRECTION.RIGHT);
+        } else {
+          // Player has stopped moving. If the view is currently within the
+          // reload threshold, update the background image.
+          if (view.x - backgroundView.x < BG_RELOAD_THRESHOLD ||
+              view.y - backgroundView.y < BG_RELOAD_THRESHOLD ||
+              backgroundView.x + backgroundView.width - view.x - view.width < BG_RELOAD_THRESHOLD ||
+              backgroundView.y + backgroundView.height - view.y - view.height < BG_RELOAD_THRESHOLD) {
+            // Reload the background at a later time, so we don't cause lag for
+            // the last animation frame
+            setTimeout(loadBackgroundView);
+          }
+        }
       }
-    };
-
-    movingFunctionId = window.setInterval(movingFunction, 30);
+    });
+    tween.play();
   }
 
   /*============================= INITIALISE =================================*/
-  // Load empty image
+  // Load an "empty" image for tiles that have no image specified
   emptyTileImage = new Image();
   // TODO: make image path part of config?
   emptyTileImage.src = "img/empty.png";
