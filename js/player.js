@@ -80,7 +80,7 @@ function PlayerManager(display, input) {
         };
 
         var playerTile = new Image();
-        playerTile.src = Pixtastic.process( playerBitmap, "crop", rect ).toDataURL();
+        playerTile.src = Pixastic.process( playerBitmap, "crop", rect ).toDataURL();
         tileImages[i] = playerTile;
       }
     };

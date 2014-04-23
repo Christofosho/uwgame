@@ -12,7 +12,7 @@ function GameManager() {
   // Load the outside map
   map.loadMap("data/UWGmap.json", 272, 160);
   
-  player.drawPlayer();
+  player.draw();
 
   return {
     menuActive: menuActive,
