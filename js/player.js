@@ -16,7 +16,7 @@ function PlayerManager(display, input) {
   // for player images
   var tileImages = [];
   var playerBitmap = null;
-  var playerLayer = display.playerLayer.getContext("2d");
+  var playerLayer = display.playerLayer;
 
   // Saves player data to local storage
   function savePlayer(saveData) {
@@ -54,8 +54,14 @@ function PlayerManager(display, input) {
       playerCanvas.done( function( tileImages ) {
 
         // Draw the player on the map
-        playerLayer.drawImage( tileImages[0], 240, 240 );
+        tileImages[0].onload = function() {
+          var initialPlayer = new Kinetic.Image({
+            image: tileImages[0], x: 240, y: 240
+          });
 
+          playerLayer.add(initialPlayer);
+          playerLayer.draw();
+        }
       });
     });
   } 
@@ -68,7 +74,6 @@ function PlayerManager(display, input) {
     var totaln = 14;
 
     playerBitmap = new Image();
-    playerBitmap.src = "img/playerBitmap.png";
     playerBitmap.onload = function() {
 
       // extracts each image from larger bitmap
@@ -82,13 +87,14 @@ function PlayerManager(display, input) {
 
         var playerTile = new Image();
         playerTile.src = Pixastic.process( playerBitmap, "crop", rect ).toDataURL();
+
         tileImages[i] = playerTile;
         if ( i == 13 ) {    
           deferred.resolve();
         }
       }
     };
-
+    playerBitmap.src = "img/playerBitmap.png";
 
     return deferred.promise();
   }

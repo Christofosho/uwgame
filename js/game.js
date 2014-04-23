@@ -10,13 +10,15 @@ function GameManager() {
   input.setInputEventHandlers(map.inputEventHandlers);
 
   // Load the outside map
+  // TODO: Custom coordinates
   map.loadMap("data/UWGmap.json", 272, 160);
-  
+
   player.draw();
 
   return {
     menuActive: menuActive,
     display: display,
+    player: player,
     input: input,
     map: map
   };
