@@ -111,17 +111,15 @@ function MapManager(display, input) {
   function loadTileSets(onComplete) {
     tileSetImages = new Array(map.tilesets.length);
 
+    // Count the number of images that have been downloaded
+    var completeCount = 0;
+
     for (var i in map.tilesets) {
       tileSetImages[i] = new Image();
       tileSetImages[i].onload = function() {
         // Check if all tilSetImages are loaded:
-        var complete = true;
-        for (var j in tileSetImages) {
-          if (!tileSetImages[j].complete) {
-            complete = false;
-          }
-        }
-        if (complete && onComplete) {
+        completeCount++;
+        if (completeCount == map.tilesets.length && onComplete) {
           onComplete();
         }
       };
@@ -179,19 +177,16 @@ function MapManager(display, input) {
       backgroundView.height * tileSizePixels.height);
     hiddenViewCtx.putImageData(imageData, 0, 0);
 
-    var backgroundImage = new Image();
-    backgroundImage.onload = function() {
-      background.setImage(backgroundImage);
-      background.setX(backgroundView.x * tileSizePixels.width);
-      background.setY(backgroundView.y * tileSizePixels.height);
-      // Only redraw if the map is not moving.
-      // (If it is moving, it will get redrawn automatically)
-      if (!moving) {
-        display.backgroundLayer.draw();
-      }
-    };
-    // Set the "src" of the image to a string containing the image data (instead of an actual URL)
-    backgroundImage.src = hiddenViewCanvas.toDataURL();
+    // Set the background "image" to be the hidden canvas
+    // (This works since you can pass a canvas object to ctx.drawImage!)
+    background.setImage(hiddenViewCanvas);
+    background.setX(backgroundView.x * tileSizePixels.width);
+    background.setY(backgroundView.y * tileSizePixels.height);
+    // Only redraw if the map is not moving.
+    // (If it is moving, it will get redrawn automatically)
+    if (!moving) {
+      display.backgroundLayer.draw();
+    }
   }
 
   // Load the tile at x, y if it hasn't been loaded already
