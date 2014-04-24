@@ -21,20 +21,70 @@ function DisplayManager(stageSizePixels) {
   if (!stageSizePixels)
     stageSizePixels = { width: 510, height: 510 };
 
-  // Loads an image from a url specified by attrs.url
-  function loadImage(attrs, callback) {
-    var img = new Kinetic.Image(attrs);
-    var imageObj = new Image();
-    imageObj.onload = function() {
-      img.setImage(imageObj);
-      if (callback) {
-        callback();
-      }
+  function getTilesetSize(tileset) {
+    var numRows = Math.floor(tileset.imageheight / tileset.tileheight);
+    var numCols = Math.floor(tileset.imagewidth / tileset.tilewidth);
+    return {
+      numRows: numRows,
+      numCols: numCols,
+      numTiles: numCols * numRows
     };
-    imageObj.src = attrs.url;
-
-    return img;
   }
+  // Load tileset images
+  function loadTileSets(tilesets) {
+    var deferred = $.Deferred();
+    var tileSetDfds = new Array(tilesets.length);
+
+    // Calculate the size required for the tile array
+    var numImages = 0;
+    for (var i in tilesets) {
+      var size = getTilesetSize(tilesets[i]);
+      numImages = Math.max(numImages, tilesets[i].firstgid + size.numTiles);
+    }
+    // The tileImages array is a flat array of all images from all tilesets
+    var tileImages = new Array(numImages);
+    for (var i in tilesets) {
+      tileSetDfds[i] = $.Deferred();
+      var tileSetImage = new Image();
+      tileSetImage.onload = function() {
+        // Split the tileset image into several tile images
+        makeTileImages(tilesets[i], tileSetImage, tileImages).done(function() {
+          tileSetDfds[i].resolve();
+        });
+      };
+      // TODO: make the path configurable?
+      tileSetImage.src = "img/" + tilesets[i].image;
+    }
+    // Resolve the deferred object when all tile sets have loaded.
+    $.when.apply($, tileSetDfds).done(function() {
+      deferred.resolve(tileImages);
+    });
+
+    return deferred.promise();
+  }
+
+  // Crop all the tileset images to the individual tile images
+  function makeTileImages(tileset, tileSetImage, tileImages) {
+    var deferred = $.Deferred();
+    var size = getTilesetSize(tileset);
+
+    for (var i = 0; i < size.numTiles; i++) {
+      // Define crop rectangle
+      var rect = {
+        left: (i % size.numCols) * tileset.tilewidth,
+        top: Math.floor(i / size.numCols) * tileset.tileheight,
+        width: tileset.tilewidth,
+        height: tileset.tileheight
+      };
+      tileImages[tileset.firstgid + i] = Pixastic.process(tileSetImage, "crop", rect);
+    }
+    // We don't really need a deferred object here, since we're just resolving
+    // it synchronously. We're only using it in case we need to go
+    // asynchronous in the future.
+    deferred.resolve(tileImages);
+    return deferred;
+  }
+
 
   var stage = new Kinetic.Stage({
     container: 'game',
@@ -72,6 +122,7 @@ function DisplayManager(stageSizePixels) {
     .add(menuLayer);
 
   return {
+    loadTileSets: loadTileSets,
     stageSizePixels: stageSizePixels,
     backgroundLayer: backgroundLayer,
     objectLayer: objectLayer,
