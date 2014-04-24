@@ -21,28 +21,39 @@ function DisplayManager(stageSizePixels) {
   if (!stageSizePixels)
     stageSizePixels = { width: 540, height: 540 };
 
+  function getTilesetSize(tileset) {
+    var numRows = Math.floor(tileset.imageheight / tileset.tileheight);
+    var numCols = Math.floor(tileset.imagewidth / tileset.tilewidth);
+    return {
+      numRows: numRows,
+      numCols: numCols,
+      numTiles: numCols * numRows
+    };
+  }
   // Load tileset images
   function loadTileSets(tilesets) {
-    var tileSetImages = new Array(tilesets.length);
-    var tileImages = new Array(tilesets.length);
-
-    // Count the number of images that have been downloaded
-    var completeCount = 0;
     var deferred = $.Deferred();
     var tileSetDfds = new Array(tilesets.length);
 
+    // Calculate the size required for the tile array
+    var numImages = 0;
+    for (var i in tilesets) {
+      var size = getTilesetSize(tilesets[i]);
+      numImages = Math.max(numImages, tilesets[i].firstgid + size.numTiles);
+    }
+    // The tileImages array is a flat array of all images from all tilesets
+    var tileImages = new Array(numImages);
     for (var i in tilesets) {
       tileSetDfds[i] = $.Deferred();
-      tileSetImages[i] = new Image();
-      tileSetImages[i].onload = function() {
+      var tileSetImage = new Image();
+      tileSetImage.onload = function() {
         // Split the tileset image into several tile images
-        makeTileImages(tilesets[i], tileSetImages[i]).done(function(tileImgs) {
-          tileImages[i] = tileImgs;
-          tileSetDfds[i].resolve(tileImages);
+        makeTileImages(tilesets[i], tileSetImage, tileImages).done(function() {
+          tileSetDfds[i].resolve();
         });
       };
       // TODO: make the path configurable?
-      tileSetImages[i].src = "img/" + tilesets[i].image;
+      tileSetImage.src = "img/" + tilesets[i].image;
     }
     // Resolve the deferred object when all tile sets have loaded.
     $.when.apply($, tileSetDfds).done(function() {
@@ -53,19 +64,15 @@ function DisplayManager(stageSizePixels) {
   }
 
   // Crop all the tileset images to the individual tile images
-  function makeTileImages(tileset, tileSetImage) {
+  function makeTileImages(tileset, tileSetImage, tileImages) {
     var deferred = $.Deferred();
-    // Store all tile images in one flattened array because that is how they
-    // need to be accessed later.
-    var numCols = Math.floor(tileset.imagewidth / tileset.tilewidth);
-    var numTiles = numCols * Math.floor(tileset.imageheight / tileset.tileheight);
-    var tileImages = new Array(numTiles + tileset.firstgid);
+    var size = getTilesetSize(tileset);
 
-    for (var i = 0; i < numTiles; i++) {
+    for (var i = 0; i < size.numTiles; i++) {
       // Define crop rectangle
       var rect = {
-        left: (i % numCols) * tileset.tilewidth,
-        top: Math.floor(i / numCols) * tileset.tileheight,
+        left: (i % size.numCols) * tileset.tilewidth,
+        top: Math.floor(i / size.numCols) * tileset.tileheight,
         width: tileset.tilewidth,
         height: tileset.tileheight
       };

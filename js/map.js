@@ -62,7 +62,7 @@ function MapManager(display, input) {
       tileDfd = display.loadTileSets(map.tilesets);
       tileDfd.done(function(tiles) {
         // Only use tiles from tileset 0?
-        tileImages = tiles[0];
+        tileImages = tiles;
         loadView(x, y);
         dfd.resolve();
       });
