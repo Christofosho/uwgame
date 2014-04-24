@@ -15,6 +15,7 @@ function PlayerManager(display, input) {
 
   // for player images
   var tileImages = [];
+  var sprites = [];
   var playerBitmap = null;
   var playerLayer = display.playerLayer;
 
@@ -45,59 +46,29 @@ function PlayerManager(display, input) {
   // Function will prepare tileset and draw player on the map
   function drawPlayer() {
     
-    // function to get player images
-    var playerImage = $.when( makePlayerImages() );
-    playerImage.done( function( tileImages ) {
-      
-      // function to create canvas
-      var playerCanvas = $.when( createPlayerCanvas() );
-      playerCanvas.done( function( tileImages ) {
+    // create canvas
+    var playerCanvas = $.when( createPlayerCanvas() );
+    playerCanvas.done( function() {
 
-        // Draw the player on the map
-        tileImages[0].onload = function() {
-          var initialPlayer = new Kinetic.Image({
-            image: tileImages[0], x: 240, y: 240
-          });
+      // get player images
+      var playerImageSets = $.when( makePlayerImageSets() );
+      playerImageSets.done( function( tileImages ) {
 
-          playerLayer.add(initialPlayer);
-          playerLayer.draw();
-        }
+        // create sprite objects
+        var playerSprites = $.when( makePlayerSprites() );
+        playerSprites.done( function( sprites ) {
+console.log(sprites);
+console.log(sprites[0]);
+          // Draw the player on the map
+          sprites[0].onload = function() {
+
+            playerLayer.add(sprites[0]);
+            playerLayer.draw();
+          };
+        });
       });
     });
   } 
-
-  // Separates player images into individual
-  function makePlayerImages() {
-    
-    var deferred = $.Deferred();
-    var i;
-    var totaln = 14;
-
-    playerBitmap = new Image();
-    playerBitmap.onload = function() {
-
-      // extracts each image from larger bitmap
-      for (i = 0; i < totaln; i++) {
-        var rect = {
-          left: (i % 7) * 30,
-          top: Math.floor(i / 7) * 30,
-          width: 30,
-          height: 30
-        };
-
-        var playerTile = new Image();
-        playerTile.src = Pixastic.process( playerBitmap, "crop", rect ).toDataURL();
-
-        tileImages[i] = playerTile;
-        if ( i == 13 ) {    
-          deferred.resolve();
-        }
-      }
-    };
-    playerBitmap.src = "img/playerBitmap.png";
-
-    return deferred.promise();
-  }
 
   function createPlayerCanvas() {
     
@@ -106,18 +77,117 @@ function PlayerManager(display, input) {
     display.playerLayer.width = 510;
     display.playerLayer.height = 510;
 
-    deferred.resolve( tileImages );
+    deferred.resolve();
 
     return deferred.promise();
   }
 
+  // Separates player images into individual
+  function makePlayerImageSets() {
+    
+    var deferred = $.Deferred();
+    var i;
+    var totaln = 4;
+
+    playerBitmap = new Image();
+    playerBitmap.onload = function() {
+
+      // extracts each image from larger bitmap
+      for (i = 0; i < totaln; i++) {
+        var rect = {
+          left: (i % 2) * 30,
+          top: Math.floor(i / 4) * 30,
+          width: 60,
+          height: 30
+        };
+
+        var playerTile = new Image();
+        playerTile.src = Pixastic.process( playerBitmap, "crop", rect ).toDataURL();
+        tileImages[i] = playerTile;
+        if ( i == 3 ) {
+          deferred.resolve( tileImages );
+        }
+      }
+    };
+    playerBitmap.src = "img/playerBitmap.png";
+
+    return deferred.promise();
+  }
+
+  function makePlayerSprites() {
+    
+    var deferred = $.Deferred();
+
+    // make an animation cycle for the sprite object
+    var animations = {
+      walk: [{
+        x: 1,
+        y: 1,
+        width: 30,
+        height: 30
+      },
+      {
+        x: 30,
+        y: 1,
+        width: 30,
+        height: 30
+      }]
+    };
+
+    for ( var i = 0; i < 4; i++ ) {
+      var playerSpriteImg = new Image();
+      playerSpriteImg.onload = function() {
+        var playerSprite = new Kinetic.Sprite({
+          x: 240,
+          y: 240,
+          image: playerSpriteImg,
+          animation: "walk",
+          animations: animations,
+          frameRate: 30,
+          frameIndex: 1
+        });
+      };
+      playerSpriteImg.src = tileImages[i].src;
+      sprites[i] = playerSpriteImg;
+
+      if( i == 3 ) {
+        deferred.resolve( sprites );
+      }
+      
+    }
+
+    return deferred.promise();
+      
+  }
+
+
 
 
   function movePlayer(direction) {
-    var player = 0;
+    if (moving) {
+      return;
+    }
+    moving = true;
+
+    switch (direction) {
+      case DIRECTION.UP:
+        break;
+      case DIRECTION.DOWN:
+        break;
+      case DIRECTION.LEFT:
+        break;
+      case DIRECTION.RIGHT:
+        break;
+    };
   }
 
-  // Directions 
+  /*============================= INITIALISE ============================*/
+  // Directions
+  var inputEventHandlers = {};
+  inputEventHandlers[INPUT.UP] = function() { movePlayer(DIRECTION.UP) };
+  inputEventHandlers[INPUT.DOWN] = function() { movePlayer(DIRECTION.DOWN) };
+  inputEventHandlers[INPUT.LEFT] = function() { movePlayer(DIRECTION.LEFT) };
+  inputEventHandlers[INPUT.RIGHT] = function() { movePlayer(DIRECTION.RIGHT) };
 
   return {
     save: savePlayer,
