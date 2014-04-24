@@ -9,9 +9,8 @@ function MapManager(display, input) {
   var view = { x: 0, y: 0, width: null, height: null };
   var backgroundView = { x: 0, y: 0, width: null, height: null };
 
-  // Array of tileset images and individual tile images
-  var tileSetImages = [];
-  var tileImages = [];
+  // Array of individual tile images
+  var tileImages = null;
 
   // Empty tiles image
   var emptyTileImage = null;
@@ -53,19 +52,31 @@ function MapManager(display, input) {
   /*============================= FUNCTIONS ==================================*/
   // Load a new map file
   function loadMap(url, x, y) {
-    // Remove old tilesets:
-    tileSetImages = [];
-    tileImages = [];
-
+    var dfd = $.Deferred();
     // Load JSON file
-    $.getJSON(url, function(json) {
+    var jsonDfd = $.getJSON(url);
+    jsonDfd.done(function(json) {
       map = json;
       initialiseMap();
-      loadTileSets(function() {
-        makeTileImages();
+      // Load tiles
+      tileDfd = display.loadTileSets(map.tilesets);
+      tileDfd.done(function(tiles) {
+        // Only use tiles from tileset 0?
+        tileImages = tiles[0];
         loadView(x, y);
+        dfd.resolve();
+      });
+      tileDfd.fail(function() {
+        alert("Failed to load tile images.");
+        dfd.reject();
       });
     });
+    jsonDfd.fail(function() {
+      // TODO: display the error in a nicer way?
+      alert("Failed to load map file '" + url + "'");
+      dfd.reject();
+    });
+    return dfd.promise();
   }
 
   // Misc setup functions after JSON file has been loaded
@@ -92,50 +103,9 @@ function MapManager(display, input) {
       }
     }
 
-    // Resize the hidden canvasses to make sure they are big enough
+    // Resize the hidden canvas to make sure it is big enough
     hiddenBackgroundCanvas.width = backgroundView.width * tileSizePixels.width;
     hiddenBackgroundCanvas.height = backgroundView.height * tileSizePixels.height;
-  }
-
-  // Load tileset images
-  function loadTileSets(onComplete) {
-    tileSetImages = new Array(map.tilesets.length);
-
-    // Count the number of images that have been downloaded
-    var completeCount = 0;
-
-    for (var i in map.tilesets) {
-      tileSetImages[i] = new Image();
-      tileSetImages[i].onload = function() {
-        // Check if all tilSetImages are loaded:
-        completeCount++;
-        if (completeCount == map.tilesets.length && onComplete) {
-          onComplete();
-        }
-      };
-      // TODO: make the path configurable?
-      tileSetImages[i].src = "img/" + map.tilesets[i].image;
-    }
-  }
-
-  // Crop all the tileset images to the individual tile images
-  function makeTileImages() {
-    for (var tileset_i in tileSetImages) {
-      var tileset = map.tilesets[tileset_i];
-      var nperrow = Math.floor(tileset.imagewidth / tileset.tilewidth);
-      var totaln = nperrow * Math.floor(tileset.imageheight / tileset.tileheight);
-
-      for (var i = 0; i < totaln; i++) {
-        // Define crop rectangle
-        var rect = {
-          left: (i % nperrow) * tileset.tilewidth,
-          top: Math.floor(i / nperrow) * tileset.tileheight,
-          width: tileset.tilewidth,
-          height: tileset.tileheight
-        };
-        tileImages[tileset.firstgid + i] = Pixastic.process(tileSetImages[tileset_i], "crop", rect);
-      }
-    }
   }
 
   // Load all tiles in given view area
@@ -149,7 +119,7 @@ function MapManager(display, input) {
   }
 
   function loadBackgroundView() {
-    // Ensure that the necessary background images have loaded
+    // Draw the necessary background tiles on the hidden canvas
     backgroundView.x = view.x - TILE_BUFFER_SIZE;
     backgroundView.y = view.y - TILE_BUFFER_SIZE;
     for (var x = backgroundView.x; x < backgroundView.x + backgroundView.width; x++) {
@@ -167,7 +137,7 @@ function MapManager(display, input) {
     }
   }
 
-  // Load the tile at x, y if it hasn't been loaded already
+  // Load the tile at x, y
   function loadTile(x, y) {
     if (x < 0 || x >= bgLayer.width || y < 0 || y >= bgLayer.height) {
       console.warn("Attempt to create tile out of bounds");
@@ -175,10 +145,10 @@ function MapManager(display, input) {
     }
 
     // Determine which type of tile to use
-    var bg_index = x + y * bgLayer.width;
+    var bgIndex = x + y * bgLayer.width;
     var tileID;
-    if (x >= 0 && y >= 0 && bg_index < bgLayer.data.length) {
-      tileID = bgLayer.data[bg_index];
+    if (x >= 0 && y >= 0 && bgIndex < bgLayer.data.length) {
+      tileID = bgLayer.data[bgIndex];
     } else {
       // OOB x and y - show empty tile
       tileID = 0;
