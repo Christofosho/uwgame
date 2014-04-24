@@ -85,7 +85,6 @@ function DisplayManager(stageSizePixels) {
     return deferred;
   }
 
-
   var stage = new Kinetic.Stage({
     container: 'game',
     width: stageSizePixels.width,
@@ -97,23 +96,6 @@ function DisplayManager(stageSizePixels) {
   var npcLayer = new Kinetic.Layer();
   var playerLayer = new Kinetic.Layer();
   var menuLayer = new Kinetic.Layer();
-
-  // Create background group
-  var background = new Kinetic.Group({ x: 0, y: 0 });
-  backgroundLayer.add(background);
-
-  // TODO: move somewhere else - possibly a player manager?
-  /*
-  var centre = this.getScreenCoords(this.getCentreTile());
-  this.player = this.loadImage({
-    url: "img/player.png",
-    x: centre.x,
-    y: centre.y,
-    width: this.tileSizePixels.width,
-    height: this.tileSizePixels.height
-  });
-  this.playerLayer.add(this.player);
-  */
 
   stage.add(backgroundLayer)
     .add(objectLayer)
@@ -129,6 +111,5 @@ function DisplayManager(stageSizePixels) {
     npcLayer: npcLayer,
     playerLayer: playerLayer,
     menuLayer: menuLayer,
-    background: background
   };
 }
