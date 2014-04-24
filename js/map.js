@@ -59,9 +59,8 @@ function MapManager(display, input) {
       map = json;
       initialiseMap();
       // Load tiles
-      tileDfd = display.loadTileSets(map.tilesets);
+      var tileDfd = display.loadTileSets(map.tilesets);
       tileDfd.done(function(tiles) {
-        // Only use tiles from tileset 0?
         tileImages = tiles;
         loadView(x, y);
         dfd.resolve();
@@ -193,6 +192,30 @@ function MapManager(display, input) {
         return;
     }
 
+    // Support diagonal movement
+    var diagonal = false;
+    if (direction == DIRECTION.LEFT || direction == DIRECTION.RIGHT) {
+      if (input.inputStates[INPUT.UP].pressed) {
+        view.y--;
+        var newRowY = view.y;
+        diagonal = true;
+      } else if (input.inputStates[INPUT.DOWN].pressed) {
+        view.y++;
+        var newRowY = view.y + view.height - 1;
+        diagonal = true;
+      }
+    } else if (direction == DIRECTION.UP || direction == DIRECTION.DOWN) {
+      if (input.inputStates[INPUT.RIGHT].pressed) {
+        view.x++;
+        var newColX = view.x + view.width - 1;
+        diagonal = true;
+      } else if (input.inputStates[INPUT.LEFT].pressed) {
+        view.x--;
+        var newColX = view.x;
+        diagonal = true;
+      }
+    }
+
     // Reload the background view here ONLY if we have to. This is a slow process so it's
     // better to do this when the player is not moving, if we get a chance.
     // This code should only run if the player runs in the same direction for a while without stopping.
@@ -201,9 +224,15 @@ function MapManager(display, input) {
       loadBackgroundView();
     }
 
+    // TODO: determine duration based on a speed
+    var moveTime = 0.3; // seconds
+    if (diagonal) {
+      moveTime *= 1.414; // about sqrt(2)
+    }
+
     var tween = new Kinetic.Tween({
       node: backgroundGroup,
-      duration: 0.3, // seconds
+      duration: moveTime,
       x: -view.x * tileSizePixels.width,
       y: -view.y * tileSizePixels.height,
 
@@ -244,11 +273,23 @@ function MapManager(display, input) {
   // TODO: make image path part of config?
   emptyTileImage.src = "img/empty.png";
 
+  // Insert a delay so that if diagonal movement is desired, 
+  // both keys are pressed prior to processing
+  var inputHandleDelay = 50; // ms
+
   var inputEventHandlers = {};
-  inputEventHandlers[INPUT.UP] = function() { shiftView(DIRECTION.UP) };
-  inputEventHandlers[INPUT.DOWN] = function() { shiftView(DIRECTION.DOWN) };
-  inputEventHandlers[INPUT.LEFT] = function() { shiftView(DIRECTION.LEFT) };
-  inputEventHandlers[INPUT.RIGHT] = function() { shiftView(DIRECTION.RIGHT) };
+  inputEventHandlers[INPUT.UP] = function() {
+    setTimeout( function() { shiftView(DIRECTION.UP) }, inputHandleDelay );
+  };
+  inputEventHandlers[INPUT.DOWN] = function() {
+    setTimeout( function() { shiftView(DIRECTION.DOWN) }, inputHandleDelay );
+  };
+  inputEventHandlers[INPUT.LEFT] = function() {
+    setTimeout( function() { shiftView(DIRECTION.LEFT) }, inputHandleDelay );
+  };
+  inputEventHandlers[INPUT.RIGHT] = function() {
+    setTimeout( function() { shiftView(DIRECTION.RIGHT) }, inputHandleDelay );
+  };
 
   return {
     loadMap: loadMap,
