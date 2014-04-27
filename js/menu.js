@@ -37,11 +37,18 @@ function MenuManager() {
     image.onload = function() {
       deferred.resolve();
     };
+    obj[property] = image;
     image.src = src;
     return deferred.promise();
   }
 
   function openMenu(menuName) {
+    if (!menus[menuName]) {
+      console.warn("No menu exists with name '" + menuName + "'");
+      return;
+    }
+    activeMenu = menus[menuName];
+    activeMenu.isOpen = true;
   }
 
   var inputEventHandlers = {};
