@@ -3,7 +3,7 @@ function MapManager(display, input) {
   /*============================= VARIABLES ==================================*/
 
   // TODO: make this set by what layer the player is actually on
-  var currentLayer = 1;
+  var currentLayer = 0;
 
   // Keep track of whether the map is currently moving
   var moving = false;
@@ -27,7 +27,6 @@ function MapManager(display, input) {
   var BG_RELOAD_THRESHOLD = 9;
 
   // Tile IDs for the background layer(s)
-  //var bgLayer = null;
   var bgLayers = [];
   var bgLayerWidth = 0;
   var bgLayerHeight = 0;
@@ -111,14 +110,13 @@ function MapManager(display, input) {
     for (var i in map.layers) {
       if (map.layers[i].name.substring(0, 5) == "layer") {
         var layerIndex = parseInt(map.layers[i].name.substring(5, 6));
-        //bgLayer = map.layers[i];
         bgLayers[layerIndex] = map.layers[i];
         bgLayerWidth = map.layers[i].width;
         bgLayerHeight = map.layers[i].height;
       }
     }
-    if (bgLayers.length == 0) {
-      console.error("No bg layer found for map!");
+    if (!bgLayers[0]) {
+      console.error("No layer0 found for map!");
       return;
     }
 
@@ -169,18 +167,10 @@ function MapManager(display, input) {
 
   // Load the tile at x, y
   function loadTile(x, y) {
-    /*
-    if (x < 0 || x >= bgLayerWidth || y < 0 || y >= bgLayerHeight) {
-      console.warn("Attempt to create tile out of bounds");
-      return;
-    }
-    */
-
-    var foreground = false;
-
     // Determine the tile index
     var bgIndex = x + y * bgLayerWidth;
     var tileID;
+    var foreground = false;
     if (x >= 0 && y >= 0 && x < bgLayerWidth && y < bgLayerHeight) {
       // find top layer:
       var layerI;
@@ -208,20 +198,15 @@ function MapManager(display, input) {
     }
 
     // Draw the tile on a hidden canvas, which will later be drawn on the stage
-    //if (Math.random() > 0.5) {
-    //if (x - backgroundView.x > 9 + 18) {
     if (foreground) {
       hiddenForegroundCtx.drawImage(tileImage, (x - backgroundView.x) * tileSizePixels.width, (y - backgroundView.y) * tileSizePixels.height);
     } else {
       hiddenBackgroundCtx.drawImage(tileImage, (x - backgroundView.x) * tileSizePixels.width, (y - backgroundView.y) * tileSizePixels.height);
     }
-    //} else {
-    //hiddenForegroundCtx.drawImage(tileImage, (x - backgroundView.x) * tileSizePixels.width, (y - backgroundView.y) * tileSizePixels.height);
-    //}
   }
 
   // Moves the background by 1 tile in the specified direction. Will also reload the background image if necessary.
-  function shiftView(direction) {
+  function shiftView() {
     if (moving) {
       return;
     }
@@ -298,16 +283,11 @@ function MapManager(display, input) {
         clearInterval(movingIntervalId);
         moving = false;
         // Continue moving if a key is pressed
-        if (input.inputStates[direction].pressed) {
-          shiftView(direction);
-        } else if (input.inputStates[INPUT.UP].pressed) {
-          shiftView(DIRECTION.UP);
-        } else if (input.inputStates[INPUT.DOWN].pressed) {
-          shiftView(DIRECTION.DOWN);
-        } else if (input.inputStates[INPUT.LEFT].pressed) {
-          shiftView(DIRECTION.LEFT);
-        } else if (input.inputStates[INPUT.RIGHT].pressed) {
-          shiftView(DIRECTION.RIGHT);
+        if (input.inputStates[INPUT.UP].pressed ||
+            input.inputStates[INPUT.DOWN].pressed ||
+            input.inputStates[INPUT.RIGHT].pressed ||
+            input.inputStates[INPUT.LEFT].pressed) {
+          shiftView();
         } else {
           // Player has stopped moving. If the view is currently within the
           // reload threshold, update the background image.
@@ -332,29 +312,23 @@ function MapManager(display, input) {
   // TODO: make image path part of config?
   emptyTileImage.src = "img/empty.png";
 
-  emptyTileImage.onload = function() {
-    console.log( "Tester" );
-    var kimage = new Kinetic.Image( {source: emptyTileImage} );
-    display.foregroundLayer.add( kimage );
-    display.foregroundLayer.draw();
-  };
-
   // Insert a delay so that if diagonal movement is desired, 
   // both keys are pressed prior to processing
+  // TODO: make delay configurable?
   var inputHandleDelay = 50; // ms
 
   var inputEventHandlers = {};
   inputEventHandlers[INPUT.UP] = function() {
-    setTimeout( function() { shiftView(DIRECTION.UP) }, inputHandleDelay );
+    setTimeout( shiftView, inputHandleDelay );
   };
   inputEventHandlers[INPUT.DOWN] = function() {
-    setTimeout( function() { shiftView(DIRECTION.DOWN) }, inputHandleDelay );
+    setTimeout( shiftView, inputHandleDelay );
   };
   inputEventHandlers[INPUT.LEFT] = function() {
-    setTimeout( function() { shiftView(DIRECTION.LEFT) }, inputHandleDelay );
+    setTimeout( shiftView, inputHandleDelay );
   };
   inputEventHandlers[INPUT.RIGHT] = function() {
-    setTimeout( function() { shiftView(DIRECTION.RIGHT) }, inputHandleDelay );
+    setTimeout( shiftView, inputHandleDelay );
   };
 
   return {
