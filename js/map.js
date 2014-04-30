@@ -1,6 +1,10 @@
 // map.js: Map Manager
 function MapManager(display, input) {
   /*============================= VARIABLES ==================================*/
+
+  // TODO: make this set by what layer the player is actually on
+  var currentLayer = 1;
+
   // Keep track of whether the map is currently moving
   var moving = false;
   var movingIntervalId;
@@ -23,8 +27,10 @@ function MapManager(display, input) {
   var BG_RELOAD_THRESHOLD = 9;
 
   // Tile IDs for the background layer(s)
-  var bgLayer = null;
+  //var bgLayer = null;
   var bgLayers = [];
+  var bgLayerWidth = 0;
+  var bgLayerHeight = 0;
 
   // Tile size (set by map in initialiseMap)
   var tileSizePixels = { width: null, height: null };
@@ -105,8 +111,10 @@ function MapManager(display, input) {
     for (var i in map.layers) {
       if (map.layers[i].name.substring(0, 5) == "layer") {
         var layerIndex = parseInt(map.layers[i].name.substring(5, 6));
-        bgLayer = map.layers[i];
+        //bgLayer = map.layers[i];
         bgLayers[layerIndex] = map.layers[i];
+        bgLayerWidth = map.layers[i].width;
+        bgLayerHeight = map.layers[i].height;
       }
     }
     if (bgLayers.length == 0) {
@@ -161,21 +169,22 @@ function MapManager(display, input) {
 
   // Load the tile at x, y
   function loadTile(x, y) {
-    if (x < 0 || x >= bgLayer.width || y < 0 || y >= bgLayer.height) {
+    /*
+    if (x < 0 || x >= bgLayerWidth || y < 0 || y >= bgLayerHeight) {
       console.warn("Attempt to create tile out of bounds");
       return;
     }
+    */
 
     var foreground = false;
 
     // Determine the tile index
-    var bgIndex = x + y * bgLayer.width;
+    var bgIndex = x + y * bgLayerWidth;
     var tileID;
-    if (x >= 0 && y >= 0 && bgIndex < bgLayer.data.length) {
-      tileID = bgLayers[0].data[bgIndex];
+    if (x >= 0 && y >= 0 && x < bgLayerWidth && y < bgLayerHeight) {
       // find top layer:
       var layerI;
-      for (layerI = bgLayers.length - 1; layerI >= 0; layerI--) {
+      for (layerI = bgLayers.length - 1; layerI > 0; layerI--) {
         if (!bgLayers[layerI]) {
           continue;
         }
@@ -184,7 +193,7 @@ function MapManager(display, input) {
         }
       }
       tileID = bgLayers[layerI].data[bgIndex];
-      foreground = (layerI > 0);
+      foreground = (layerI > currentLayer);
     } else {
       // OOB x and y - show empty tile
       tileID = 0;
