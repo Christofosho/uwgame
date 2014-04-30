@@ -85,6 +85,9 @@ function DisplayManager(stageSizePixels) {
     return deferred;
   }
 
+  function update() {
+    // TODO: ensure that the correct section of the map is loaded?
+  }
 
   var stage = new Kinetic.Stage({
     container: 'game',
@@ -97,10 +100,6 @@ function DisplayManager(stageSizePixels) {
   var npcLayer = new Kinetic.Layer();
   var playerLayer = new Kinetic.Layer();
   var menuLayer = new Kinetic.Layer();
-
-  // Create background group
-  var background = new Kinetic.Group({ x: 0, y: 0 });
-  backgroundLayer.add(background);
 
   // TODO: move somewhere else - possibly a player manager?
   /*
@@ -129,6 +128,7 @@ function DisplayManager(stageSizePixels) {
     npcLayer: npcLayer,
     playerLayer: playerLayer,
     menuLayer: menuLayer,
-    background: background
+    background: background,
+    update: update
   };
 }

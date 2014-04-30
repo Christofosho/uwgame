@@ -16,8 +16,8 @@ window.cancelAnimFrame =
 
 function UWGApplication() {
   var input = new InputManager();
-  var game = new GameManager();
-  var display = new DisplayManager(game);
+  var display = new DisplayManager();
+  var game = new GameManager(display, input);
 
   var lastTime = new Date().getTime();
 

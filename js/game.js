@@ -1,4 +1,4 @@
-﻿function GameManager() {
+﻿function GameManager(display, input) {
   var menuActive = false;
   var map = new MapManager(display, input);
 
