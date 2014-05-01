@@ -103,17 +103,6 @@ function DisplayManager(stageSizePixels) {
   var foregroundLayer = new Kinetic.Layer();
   var menuLayer = new Kinetic.Layer();
 
-<<<<<<< HEAD
-  // TODO: move somewhere else - possibly a player manager?
-  /*
-  var centre = this.getScreenCoords(this.getCentreTile());
-  this.player = this.loadImage({
-    url: "img/player.png",
-    x: centre.x,
-    y: centre.y,
-    width: this.tileSizePixels.width,
-    height: this.tileSizePixels.height
-=======
   // TODO: put a real player in the layer
   var rect = new Kinetic.Rect({
     width: 30,
@@ -123,7 +112,6 @@ function DisplayManager(stageSizePixels) {
     strokeWidth: 1,
     x: 240,
     y: 240
->>>>>>> master
   });
   playerLayer.add( rect );
 
@@ -141,13 +129,9 @@ function DisplayManager(stageSizePixels) {
     objectLayer: objectLayer,
     npcLayer: npcLayer,
     playerLayer: playerLayer,
-<<<<<<< HEAD
     menuLayer: menuLayer,
     background: background,
-    update: update
-=======
+    update: update,
     foregroundLayer: foregroundLayer,
-    menuLayer: menuLayer
->>>>>>> master
   };
 }
