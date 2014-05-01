@@ -19,7 +19,7 @@
 function DisplayManager(stageSizePixels) {
 
   if (!stageSizePixels)
-    stageSizePixels = { width: 540, height: 540 };
+    stageSizePixels = { width: 510, height: 510 };
 
   function getTilesetSize(tileset) {
     var numRows = Math.floor(tileset.imageheight / tileset.tileheight);
@@ -30,6 +30,7 @@ function DisplayManager(stageSizePixels) {
       numTiles: numCols * numRows
     };
   }
+
   // Load tileset images
   function loadTileSets(tilesets) {
     var deferred = $.Deferred();
@@ -85,6 +86,9 @@ function DisplayManager(stageSizePixels) {
     return deferred;
   }
 
+  function update() {
+    // TODO: ensure that the correct section of the map is loaded?
+  }
   var stage = new Kinetic.Stage({
     container: 'game',
     width: stageSizePixels.width,
@@ -95,12 +99,26 @@ function DisplayManager(stageSizePixels) {
   var objectLayer = new Kinetic.Layer();
   var npcLayer = new Kinetic.Layer();
   var playerLayer = new Kinetic.Layer();
+  var foregroundLayer = new Kinetic.Layer();
   var menuLayer = new Kinetic.Layer();
+
+  // TODO: put a real player in the layer
+  var rect = new Kinetic.Rect({
+    width: 30,
+    height: 30,
+    fill: 'red',
+    stroke: 'black',
+    strokeWidth: 1,
+    x: 240,
+    y: 240
+  });
+  playerLayer.add( rect );
 
   stage.add(backgroundLayer)
     .add(objectLayer)
     .add(npcLayer)
     .add(playerLayer)
+    .add(foregroundLayer)
     .add(menuLayer);
 
   return {
@@ -111,5 +129,8 @@ function DisplayManager(stageSizePixels) {
     npcLayer: npcLayer,
     playerLayer: playerLayer,
     menuLayer: menuLayer,
+    background: background,
+    update: update,
+    foregroundLayer: foregroundLayer,
   };
 }

@@ -3,16 +3,15 @@ function InputManager() {
 
   /* ============================== VARIABLES =============================== */
 
-  /* The inputEvent objects are in the form of {INPUT : FUNCTION()}
-     When the specified input is pressed (or depressed) the function will be run
-     These objects should be set by the game manager
-     */
-  var inputEventHandlers = {};
-
+  // Contains the state of each input (pressed or unpressed)
   var inputStates = {};
   for (i in INPUT) {
     inputStates[INPUT[i]] = { pressed: false };
   }
+
+  // A queue that contains inputs that have been received but not processed
+  // Inputs will be added by the ImputManager and removed by the application
+  var inputQueue = [];
 
   /* Keyboard Map:
      Map the keyboard inputs (from event.which) to the INPUT
@@ -49,9 +48,7 @@ function InputManager() {
     if (input) {
       event.preventDefault();
       inputStates[input].pressed = true;
-      if (inputEventHandlers[input]) {
-        (inputEventHandlers[input])();
-      }
+      inputQueue.push(input);
     }
   }
 
@@ -63,16 +60,12 @@ function InputManager() {
     }
   }
 
-  function setInputEventHandlers(eventHandlers) {
-    inputEventHandlers = eventHandlers;
-  }
-
   // Key up and down listening events
   $(document).keydown(keyDown);
   $(document).keyup(keyUp);
 
   return {
     inputStates: inputStates,
-    setInputEventHandlers: setInputEventHandlers
+    inputQueue: inputQueue
   };
 }
