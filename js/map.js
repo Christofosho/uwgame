@@ -306,6 +306,11 @@ function MapManager(display, input) {
     movingIntervalId = setInterval(moveBackground, 1000 / frameRate);
   }
 
+  /*============================= UPDATE FUNCTION ============================*/
+  function update(deltaTime) {
+
+  }
+
   /*============================= INITIALISE =================================*/
   // Load an "empty" image for tiles that have no image specified
   emptyTileImage = new Image();
@@ -334,6 +339,7 @@ function MapManager(display, input) {
   return {
     loadMap: loadMap,
     loadView: loadView,
-    inputEventHandlers: inputEventHandlers
+    inputEventHandlers: inputEventHandlers,
+    update: update
   };
 }
