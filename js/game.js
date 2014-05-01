@@ -1,12 +1,17 @@
-﻿function GameManager(display, input) {
+﻿var GAME_EVENT = {
+  UPDATE: "update",
+  MOVE_MAP: "moveMap"
+};
+
+function GameManager(display, input) {
   var menuActive = false;
-  var map = new MapManager(display, input);
+  var gameEvents = new EventDispatcher();
+  var map = new MapManager(display, input, gameEvents);
 
-  // Send input commands to the map (for now, at least)
+  // Inputs can be sent to different modules, depending on what is currently active in the game.
+  // During gameplay, the map handles inputs.
+  // While the menu is open, the menu handles inputs
   var inputEventHandlers = map.inputEventHandlers;
-
-  // Load the outside map
-  map.loadMap("data/UWGmap.json", 272, 160);
 
   function processInputs(inputQueue) {
     for (var i = 0; i < inputQueue.length; i++) {
@@ -20,14 +25,17 @@
 
   // Update the game state given the amount of elapsed time
   function update(time) {
-    map.update(time);
+    gameEvents.fireEvent(GAME_EVENT.UPDATE, time);
   }
+
+  // Load the outside map
+  map.loadMap("data/UWGmap.json", 272, 160);
 
   return {
     menuActive: menuActive,
     map: map,
     processInputs: processInputs,
-    update: update
+    update: update,
+    gameEvents: gameEvents
   };
 }
-

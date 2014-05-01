@@ -1,5 +1,5 @@
 // map.js: Map Manager
-function MapManager(display, input) {
+function MapManager(display, input, gameEvents) {
   /*============================= VARIABLES ==================================*/
 
   // TODO: make this set by what layer the player is actually on
@@ -205,11 +205,28 @@ function MapManager(display, input) {
     }
   }
 
-  // Moves the background by 1 tile in the specified direction. Will also reload the background image if necessary.
-  function shiftView() {
+  function attemptMove() {
     if (moving) {
       return;
     }
+
+    var distance = { x: 0, y: 0 };
+    if (input.inputStates[INPUT.UP].pressed)
+      distance.y--;
+    if (input.inputStates[INPUT.DOWN].pressed)
+      distance.y++;
+    if (input.inputStates[INPUT.RIGHT].pressed)
+      distance.x++;
+    if (input.inputStates[INPUT.LEFT].pressed)
+      distance.x--;
+
+    // TODO: run collision and bounds checks
+
+    gameEvents.fireEvent(GAME_EVENT.MOVE_MAP, distance);
+  }
+
+  // Moves the background by 1 tile in the specified direction(s). Will also reload the background image if necessary.
+  function shiftView(distance) {
     moving = true;
 
     // Record the current view
@@ -218,6 +235,7 @@ function MapManager(display, input) {
     oldView.y = view.y;
 
     // Determine movement direction
+    // TODO: use distance parameter instead of looking at inputs
     var nDirections = 0;
     if (input.inputStates[INPUT.UP].pressed) {
       view.y--;
@@ -312,6 +330,7 @@ function MapManager(display, input) {
   // TODO: make image path part of config?
   emptyTileImage.src = "img/empty.png";
 
+  // Handle input events to trigger map movement.
   // Insert a delay so that if diagonal movement is desired, 
   // both keys are pressed prior to processing
   // TODO: make delay configurable?
@@ -319,17 +338,20 @@ function MapManager(display, input) {
 
   var inputEventHandlers = {};
   inputEventHandlers[INPUT.UP] = function() {
-    setTimeout( shiftView, inputHandleDelay );
+    setTimeout( attemptMove, inputHandleDelay );
   };
   inputEventHandlers[INPUT.DOWN] = function() {
-    setTimeout( shiftView, inputHandleDelay );
+    setTimeout( attemptMove, inputHandleDelay);
   };
   inputEventHandlers[INPUT.LEFT] = function() {
-    setTimeout( shiftView, inputHandleDelay );
+    setTimeout( attemptMove, inputHandleDelay);
   };
   inputEventHandlers[INPUT.RIGHT] = function() {
-    setTimeout( shiftView, inputHandleDelay );
+    setTimeout( attemptMove, inputHandleDelay);
   };
+
+  gameEvents.addEventListener(GAME_EVENT.MOVE_MAP, shiftView);
+  gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
 
   return {
     loadMap: loadMap,
