@@ -14,8 +14,8 @@
       "textAlign":"center",
     },
     "items":[
-      { "label":"New Game", "action":"new" },
-      { "label":"Load Game", "action":"load" },
+      { "label":"New Game", "command":"new" },
+      { "label":"Load Game", "command":"load" },
     ]
   },
   "pause":{
@@ -34,8 +34,8 @@
       "textAlign":"left",
     },
     "items":[
-      { "label":"Save", "action":"save" },
-      { "label":"Quit", "action":"quit" },
+      { "label":"Save", "command":"save" },
+      { "label":"Quit", "command":"quit" },
     ]
   }
 }
