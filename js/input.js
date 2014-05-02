@@ -57,7 +57,7 @@ function InputManager() {
         inputStates[input].repeat = true;
       }
       inputStates[input].pressed = true;
-      inputQueue.push(input);
+      inputQueue.push({ input: input, press: true });
     }
   }
 
@@ -66,6 +66,7 @@ function InputManager() {
     if (input) {
       event.preventDefault();
       inputStates[input].pressed = false;
+      inputQueue.push({ input: input, press: false });
     }
   }
 

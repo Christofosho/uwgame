@@ -223,7 +223,6 @@ function MapManager(display, input, gameEvents) {
   // Queue to store movement commands. Handling these is delayed by a time in 
   // order to ensure diagonal commands are handled properly.
   var moveCmdQueue = [];
-  var moveCmdDelay = 50; // ms
 
   // Movement speed
   var tilesPerMs = 5 / 1000;
@@ -234,109 +233,104 @@ function MapManager(display, input, gameEvents) {
   // Next view position to move to
   var targetViewPos = { x: 0, y: 0 };
 
+  // Commands that are processed as movement commands
+  var MOVECOMMANDS = [INPUT.UP, INPUT.DOWN, INPUT.RIGHT, INPUT.LEFT];
+
+  // Time after which commands are valid. This is put slightly in the future
+  // whenever a new command is received
+  var moveCmdsValidTime = new Date().getTime();
+  var moveCmdDelay = 30; // ms
+
+  // Sets command valid time a delay in the future
+  function resetMoveCmdsValidTime() {
+    moveCmdsValidTime = new Date().getTime() + moveCmdDelay;
+  }
+
   // Receives input commands and stores non-repeated commands onto queue
   function handleMoveCommandInput(receivedInput) {
     // ignore repeats
     if (input.inputStates[receivedInput].repeat) {
       return;
     }
-    // only store once
-    if (moveCmdQueue.indexOf(receivedInput) > 0) {
-      return;
-    }
+    resetMoveCmdsValidTime();
     moveCmdQueue.push(receivedInput);
   }
 
-  // If not moving, checks the command queue, and if the earliest command
-  // was received some time ago, process all of the received commands
-  function checkMoveCmdQueue() {
-    if (moving) {
-      return;
-    }
-
-    var time = new Date().getTime() - moveCmdDelay;
-    for (var i = 0; i < moveCmdQueue.length; i++) {
-      if (input.inputStates[moveCmdQueue[i]].pressedTime < time) {
-        // at this point ALL commands are processed at once
-        handleMoveCmds(moveCmdQueue);
-        moveCmdQueue.length = 0;
-      }
-    }
-  }
-
-  // If not moving, process all held commadns AND received commands
-  var moveCommands = [INPUT.UP, INPUT.DOWN, INPUT.RIGHT, INPUT.LEFT];
-  function checkForHeldMoveCmds() {
-    if (moving) {
+  // If currently not moving, and if commands are valid (not in transition time),
+  // then process all held commands and commands in queue
+  function checkProcessMoveCmds() {
+    if (moving || new Date().getTime() < moveCmdsValidTime) {
+      // Nothing to do if moving or commands are not valid
       return;
     }
 
     // Add all pressed commands to a queue
     var pressedMoveCmds = [];
-    for (var i = 0; i < moveCommands.length; i++) {
-      if (input.inputStates[moveCommands[i]].pressed) {
-        pressedMoveCmds.push(moveCommands[i]);
+    for (var i = 0; i < MOVECOMMANDS.length; i++) {
+      if (input.inputStates[MOVECOMMANDS[i]].pressed) {
+        pressedMoveCmds.push(MOVECOMMANDS[i]);
       }
     }
+
     // Process pressed and received commands
-    handleMoveCmds(pressedMoveCmds.concat(moveCmdQueue));
+    processMoveCmds(pressedMoveCmds.concat(moveCmdQueue));
+
+    // Clear command queue
     moveCmdQueue.length = 0;
   }
 
   // Processes an array of movement commands and determines movement direction
   // TODO: check if movement in that direction is possible
   // then issues a command to move in that direction
-  function handleMoveCmds(moveCmds) {
+  function processMoveCmds(cmds) {
     // Determine movement vector and any new rows/cols on screen
+    // Use indexOf in order to ensure each commands is processed once
     movementVector = { x: 0, y: 0 };
-    for (var i = 0; i < moveCmds.length; i++) {
-      switch (moveCmds[i]) {
-        case INPUT.UP:
-          movementVector.y = -1;
+    if (cmds.indexOf(INPUT.UP) >= 0) {
+          movementVector.y--;
           var newRowY = view.y - 1;
-          break;
-        case INPUT.DOWN:
+    }
+    if (cmds.indexOf(INPUT.DOWN) >= 0) {
           var newRowY = view.y + view.height;
-          movementVector.y = 1;
-          break;
-        case INPUT.LEFT:
+          movementVector.y++;
+    }
+    if (cmds.indexOf(INPUT.LEFT) >= 0) {
           var newColX = view.x - 1;
-          movementVector.x = -1;
-          break;
-        case INPUT.RIGHT:
+          movementVector.x--;
+    }
+    if (cmds.indexOf(INPUT.RIGHT) >= 0) {
           var newColX = view.x + view.width;
-          movementVector.x = 1;
-          break;
-        default:
-          break;
-      }
+          movementVector.x++;
     }
 
-    // Check for an actual movement:
-    if (movementVector.x != 0 || movementVector.y != 0) {
-      moving = true;
-      movementVector.diagonal = (movementVector.x != 0 && movementVector.y != 0);
-      targetViewPos.x = view.x + movementVector.x;
-      targetViewPos.y = view.y + movementVector.y;
+    // Check for zero movement (i.e. if opposite directions are both pressed)
+    if (movementVector.x == 0 && movementVector.y == 0) {
+      return;
+    }
 
-      // Check if backround should be reloaded
-      // Hopefully this will not happen too often since it is called when
-      // movement finishes
-      if ((newColX !== undefined && (newColX < backgroundView.x || newColX >= backgroundView.x + backgroundView.width))
-          || (newRowY !== undefined && (newRowY < backgroundView.y || newRowY >= backgroundView.y + backgroundView.height))) {
-        loadBackgroundView();
-      }
+    // We are moving! Setup for movement
+    moving = true;
+    movementVector.diagonal = (movementVector.x != 0 && movementVector.y != 0);
+    targetViewPos.x = view.x + movementVector.x;
+    targetViewPos.y = view.y + movementVector.y;
+
+    // Check if backround should be reloaded
+    // (Hopefully this will not happen too often since it is called when
+    // movement finishes)
+    if ((newColX !== undefined && (newColX < backgroundView.x || newColX >= backgroundView.x + backgroundView.width))
+        || (newRowY !== undefined && (newRowY < backgroundView.y || newRowY >= backgroundView.y + backgroundView.height))) {
+      loadBackgroundView();
     }
   }
 
   // Update function
   function update(deltaTime) {
-    checkMoveCmdQueue();
+    checkProcessMoveCmds();
 
     // Update background if moving
     if (moving) {
-      view.x += movementVector.x * tilesPerMs * (movementVector.diagonal ? 0.707 : 1)* deltaTime;
-      view.y += movementVector.y * tilesPerMs * (movementVector.diagonal ? 0.707 : 1)* deltaTime;
+      view.x += movementVector.x * tilesPerMs * (movementVector.diagonal ? 0.707 : 1) * deltaTime;
+      view.y += movementVector.y * tilesPerMs * (movementVector.diagonal ? 0.707 : 1) * deltaTime;
 
       // If movement is complete:
       if ((targetViewPos.x - view.x) * movementVector.x <= 0 &&
@@ -346,7 +340,7 @@ function MapManager(display, input, gameEvents) {
         view.y = targetViewPos.y;
         moving = false;
 
-        checkForHeldMoveCmds();
+        checkProcessMoveCmds();
         // If there is no continued movement, reload the background
         if (!moving) {
           setTimeout(loadBackgroundView());
@@ -370,27 +364,41 @@ function MapManager(display, input, gameEvents) {
   emptyTileImage.src = "img/empty.png";
 
   // Handle input events to trigger map movement.
-  var inputEventHandlers = {};
-  inputEventHandlers[INPUT.UP] = function() {
+  var inputPressEventHandlers = {};
+  inputPressEventHandlers[INPUT.UP] = function() {
     handleMoveCommandInput(INPUT.UP);
   };
-  inputEventHandlers[INPUT.DOWN] = function() {
+  inputPressEventHandlers[INPUT.DOWN] = function() {
     handleMoveCommandInput(INPUT.DOWN);
   };
-  inputEventHandlers[INPUT.LEFT] = function() {
+  inputPressEventHandlers[INPUT.LEFT] = function() {
     handleMoveCommandInput(INPUT.LEFT);
   };
-  inputEventHandlers[INPUT.RIGHT] = function() {
+  inputPressEventHandlers[INPUT.RIGHT] = function() {
     handleMoveCommandInput(INPUT.RIGHT);
   };
 
-  //gameEvents.addEventListener(GAME_EVENT.MOVE_MAP, shiftView);
+  var inputUnpressEventHandlers = {};
+  inputUnpressEventHandlers[INPUT.UP] = function() {
+    resetMoveCmdsValidTime();
+  };
+  inputUnpressEventHandlers[INPUT.DOWN] = function() {
+    resetMoveCmdsValidTime();
+  };
+  inputUnpressEventHandlers[INPUT.LEFT] = function() {
+    resetMoveCmdsValidTime();
+  };
+  inputUnpressEventHandlers[INPUT.RIGHT] = function() {
+    resetMoveCmdsValidTime();
+  };
+
   gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
 
   return {
     loadMap: loadMap,
     loadView: loadView,
-    inputEventHandlers: inputEventHandlers,
+    inputPressEventHandlers: inputPressEventHandlers,
+    inputUnpressEventHandlers: inputUnpressEventHandlers,
     getPlayerPosition: getPlayerPosition,
     update: update
   };
