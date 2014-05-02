@@ -17,12 +17,16 @@
       listeners[event].splice(index, 1);
   }
 
-  function fireEvent(event, data) {
+  function fireEvent(event) {
     if (!listeners[event])
       return;
 
+    // Retrieve all arguments after the 1st
+    var args = Array.prototype.slice.call(arguments, 1);
+
+    // Call each listener with the arguments
     for (var i in listeners[event]) {
-      listeners[event][i](data);
+      listeners[event][i].apply(window, args);
     }
   }
 
