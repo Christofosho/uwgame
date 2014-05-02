@@ -7,11 +7,16 @@ function MapManager(display, input) {
 
   // Keep track of whether the map is currently moving
   var moving = false;
-  var movingIntervalId;
 
   // Map coordinates of the view. Indicates which tiles are currently in the view.
   var view = { x: 0, y: 0, width: null, height: null };
   var backgroundView = { x: 0, y: 0, width: null, height: null };
+
+  // Position of player with respect to view
+  var playerViewPos = { x: 0, y: 0 };
+
+  // Position of player on the screen (in tiles)
+  var playerScreenPos = { x: 0, y: 0 };
 
   // Array of individual tile images
   var tileImages = null;
@@ -64,7 +69,7 @@ function MapManager(display, input) {
   display.foregroundLayer.add(foregroundGroup);
 
   /*============================= FUNCTIONS ==================================*/
-  // Load a new map file
+  // Load a new map file for a given player position
   function loadMap(url, x, y) {
     var dfd = $.Deferred();
     // Load JSON file
@@ -99,6 +104,10 @@ function MapManager(display, input) {
     tileSizePixels.width = map.tilewidth;
     view.width = Math.ceil(display.stageSizePixels.width / tileSizePixels.width);
     view.height = Math.ceil(display.stageSizePixels.height / tileSizePixels.height);
+    playerViewPos.x = Math.floor(view.width / 2);
+    playerViewPos.y = Math.floor(view.height / 2);
+    playerScreenPos.x = playerViewPos.x - TILE_BUFFER_SIZE;
+    playerScreenPos.y = playerViewPos.y - TILE_BUFFER_SIZE;
 
     backgroundView.x = view.x - TILE_BUFFER_SIZE;
     backgroundView.y = view.y - TILE_BUFFER_SIZE;
@@ -127,11 +136,11 @@ function MapManager(display, input) {
     hiddenForegroundCanvas.height = backgroundView.height * tileSizePixels.height;
   }
 
-  // Load all tiles in given view area
+  // Load all tiles for a given player position
   function loadView(x, y) {
     // Set view
-    view.x = x;
-    view.y = y;
+    view.x = x - playerViewPos.x;
+    view.y = y - playerViewPos.y;
     backgroundGroup.setX(-view.x * tileSizePixels.width);
     backgroundGroup.setY(-view.y * tileSizePixels.height);
     foregroundGroup.setX(-view.x * tileSizePixels.width);
@@ -205,6 +214,7 @@ function MapManager(display, input) {
     }
   }
 
+/*
   // Moves the background by 1 tile in the specified direction. Will also reload the background image if necessary.
   function shiftView() {
     if (moving) {
@@ -305,10 +315,77 @@ function MapManager(display, input) {
 
     movingIntervalId = setInterval(moveBackground, 1000 / frameRate);
   }
+  */
+
+  function getPlayerPosition() {
+    return { x: Math.round(view.x + playerViewPos.x),
+             y: Math.round(view.y + playerViewPos.y) };
+  }
 
   /*============================= UPDATE FUNCTION ============================*/
+  var tilesPerMs = 5 / 1000;
+  var movementVector = { x: 0, y: 0, diagonal: false };
+  var targetPos = { x: 0, y: 0 };
   function update(deltaTime) {
+    if (!moving) {
+      // Determine movement direction
+      movementVector.x = 0;
+      movementVector.y = 0;
+      if (input.inputStates[INPUT.UP].pressed) {
+        var newRowY = view.y - 1;
+        movementVector.y--;
+      } else if (input.inputStates[INPUT.DOWN].pressed) {
+        var newRowY = view.y + view.height;
+        movementVector.y++;
+      }
+      if (input.inputStates[INPUT.RIGHT].pressed) {
+        var newColX = view.x + view.width;
+        movementVector.x++;
+      } else if (input.inputStates[INPUT.LEFT].pressed) {
+        var newColX = view.x - 1;
+        movementVector.x--;
+      }
 
+      // If a movement command is received
+      if (movementVector.x != 0 || movementVector.y != 0) {
+        moving = true;
+        movementVector.diagonal = (movementVector.x != 0 && movementVector.y != 0);
+        targetPos.x = view.x + movementVector.x;
+        targetPos.y = view.y + movementVector.y;
+
+        // Check if backround should be reloaded
+        // Hopefully this will not happen too often since it is called when
+        // movement finishes
+        if ((newColX !== undefined && (newColX < backgroundView.x || newColX >= backgroundView.x + backgroundView.width))
+           || (newRowY !== undefined && (newRowY < backgroundView.y || newRowY >= backgroundView.y + backgroundView.height))) {
+          loadBackgroundView();
+        }
+      }
+    }
+
+    // double check moving variable, since it may have been updated
+    if (moving) {
+      view.x += movementVector.x * tilesPerMs * (movementVector.diagonal ? 0.707 : 1)* deltaTime;
+      view.y += movementVector.y * tilesPerMs * (movementVector.diagonal ? 0.707 : 1)* deltaTime;
+
+      // If movement is complete:
+      if ((targetPos.x - view.x) * movementVector.x <= 0 &&
+          (targetPos.y - view.y) * movementVector.y <= 0) {
+        // TODO: add continued movement functionality
+        view.x = targetPos.x;
+        view.y = targetPos.y;
+        moving = false;
+        loadBackgroundView();
+      }
+
+      // Update screen
+      backgroundGroup.setX(Math.round(-view.x * tileSizePixels.width));
+      backgroundGroup.setY(Math.round(-view.y * tileSizePixels.height));
+      foregroundGroup.setX(Math.round(-view.x * tileSizePixels.width));
+      foregroundGroup.setY(Math.round(-view.y * tileSizePixels.height));
+      display.backgroundLayer.draw();
+      display.foregroundLayer.draw();
+    }
   }
 
   /*============================= INITIALISE =================================*/
@@ -320,9 +397,11 @@ function MapManager(display, input) {
   // Insert a delay so that if diagonal movement is desired, 
   // both keys are pressed prior to processing
   // TODO: make delay configurable?
+  // TODO: how to do this now?
   var inputHandleDelay = 50; // ms
 
   var inputEventHandlers = {};
+  /*
   inputEventHandlers[INPUT.UP] = function() {
     setTimeout( shiftView, inputHandleDelay );
   };
@@ -335,11 +414,13 @@ function MapManager(display, input) {
   inputEventHandlers[INPUT.RIGHT] = function() {
     setTimeout( shiftView, inputHandleDelay );
   };
+  */
 
   return {
     loadMap: loadMap,
     loadView: loadView,
     inputEventHandlers: inputEventHandlers,
+    getPlayerPosition: getPlayerPosition,
     update: update
   };
 }
