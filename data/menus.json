@@ -12,10 +12,13 @@
       "itemWidth":340,
       "itemHeight":50,
       "textAlign":"center",
+      "textPadding":10,
+      "fontColor":"#000",
+      "fontSize":30
     },
     "items":[
       { "label":"New Game", "command":"new" },
-      { "label":"Load Game", "command":"load" },
+      { "label":"Load Game", "command":"load" }
     ]
   },
   "pause":{
@@ -32,10 +35,13 @@
       "itemWidth":240,
       "itemHeight":50,
       "textAlign":"left",
+      "textPadding":5,
+      "fontColor":"#000",
+      "fontSize":20
     },
     "items":[
       { "label":"Save", "command":"save" },
-      { "label":"Quit", "command":"quit" },
+      { "label":"Quit", "command":"quit" }
     ]
   }
 }

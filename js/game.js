@@ -32,7 +32,9 @@ function GameManager(display, input) {
   // During gameplay, the map handles inputs.
   // While the menu is open, the menu handles inputs
   var inputEventHandlers = menu.inputEventHandlers;
-  menu.openMenu("main");
+  menu.loadMenus().done(function() {
+    menu.openMenu("main");
+  })
 
   function processInputs(inputQueue) {
     for (var i = 0; i < inputQueue.length; i++) {

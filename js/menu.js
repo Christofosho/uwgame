@@ -10,19 +10,19 @@ function MenuManager(display, input, game) {
   function loadMenus() {
     var deferred = $.Deferred();
     var jsonDfd = $.getJSON("data/menus.json");
+    var menuDfds = new Array(menus.length);
     jsonDfd.done(function(result) {
       menus = result;
       for (var i in menus) {
         var menu = menus[i];
         var itemDef = menu.itemDef;
-        menuDfds[i] = loadMenuImages(menu);
         menu.image = new Kinetic.Image({
           x: menu.background.x,
           y: menu.background.y,
           visible: false
         });
         display.menuLayer.add(menu.image);
-        for (var j = 0; j < menu.items.length; i++) {
+        for (var j = 0; j < menu.items.length; j++) {
           var item = menu.items[j];
           var x = itemDef.firstX;
           var y = itemDef.firstY + itemDef.itemHeight * j;
@@ -35,32 +35,37 @@ function MenuManager(display, input, game) {
             text: item.label,
             x: x,
             y: y,
-            width: itemWidth,
-            height: itemHeight,
+            fontFamily: "Arial", // TODO: don't hard-code the menu font here
+            fontSize: itemDef.fontSize,
+            fill: itemDef.fontColor,
+            width: itemDef.itemWidth,
+            padding: itemDef.textPadding,
             visible: false
           });
           display.menuLayer.add(item.image);
           display.menuLayer.add(item.text);
         }
-        menuDfds[i].done(function() {
+        var menuDfd = loadMenuImages(menu);
+        menuDfd.done(function() {
           menu.image.setImage(menu.background.image);
           if (menu.items.length) {
-            menu.items[0].setImage(menu.itemDef.selectedImage);
-            for (var i = 1; i < menu.items.length; i++) {
-              menu.items[i].setImage(menu.itemDef.image);
+            menu.items[0].image.setImage(menu.itemDef.selectedImage);
+            for (var j = 1; j < menu.items.length; j++) {
+              menu.items[j].image.setImage(menu.itemDef.image);
             }
           }
-          if (menu.isOpen) {
-            redraw = true;
-          }
         });
+        menuDfds.push(menuDfd);
       }
-      var menuDfds = new Array(menus.length);
-      // Resolve once all menus have finished loading
-      $.when.apply($, menuDfds).done(function() {
+      // Resolve once all menus have finished loading (or failed to load)
+      $.when.apply($, menuDfds).always(function() {
         deferred.resolve(menus);
       });
     });
+    jsonDfd.fail(function(obj, errorType, error) {
+      console.error("Failed to load menu data: " + error.stack);
+      deferred.reject();
+    })
     return deferred.promise();
   }
 
@@ -76,10 +81,13 @@ function MenuManager(display, input, game) {
     var deferred = $.Deferred();
     var src = obj[property];
     var image = new Image();
+    obj[property] = image;
     image.onload = function() {
       deferred.resolve();
     };
-    obj[property] = image;
+    image.onerror = function() {
+      deferred.reject();
+    };
     image.src = src;
     return deferred.promise();
   }
@@ -90,7 +98,7 @@ function MenuManager(display, input, game) {
         console.warn("No menu exists with name '" + menu + "'");
         return;
       }
-      menu == menus[menu];
+      menu = menus[menu];
     }
     if (open === undefined)
       open = true;
@@ -102,21 +110,22 @@ function MenuManager(display, input, game) {
       menu.items[i].text.setVisible(open);
     }
     if (open) {
-      activeMenu = menus[menuName];
+      activeMenu = menu;
       if (activeMenu.items.length > 0) {
         selectedIndex = 0;
         setMenuItemSelected(activeMenu, selectedIndex, true);
       } else {
         selectedIndex = -1;
       }
-    } else if (menus[menuMane] == activeMenu) {
+    } else if (menu == activeMenu) {
       // Closing the active menu. Activate the parent menu.
       if (activeMenu.parentMenu) {
         activeMenu = activeMenu.parentMenu;
         selectedIndex = getSelectedIndex(activeMenu);
       } else {
         // No parent menu. Release control to the game manager.
-        game.commands[COMMAND.CLOSE_MENU]();
+        activeMenu = null;
+        game.commands.closeMenu();
       }
     }
     redraw = true;
@@ -156,15 +165,16 @@ function MenuManager(display, input, game) {
   function update(time) {
     if (redraw) {
       display.menuLayer.draw();
+      //redraw = false;
     }
   }
 
   var inputEventHandlers = {};
   inputEventHandlers[INPUT.UP] = function() {
-    setSelectedIndex(selectedIndex + 1);
+    setSelectedIndex(selectedIndex - 1);
   }
   inputEventHandlers[INPUT.DOWN] = function() {
-    setSelectedIndex(selectedIndex - 1);
+    setSelectedIndex(selectedIndex + 1);
   }
   inputEventHandlers[INPUT.LEFT] = function() {
     if (activeMenu.items[selectedIndex].subMenu)
@@ -174,14 +184,26 @@ function MenuManager(display, input, game) {
     if (activeMenu.parentMenu)
       openMenu(activeMenu, false);
   }
-  inputEventHandlers[INPUT.ENTER] = function() {
+  inputEventHandlers[INPUT.ACTION] = function() {
     executeMenuItem(activeMenu.items[selectedIndex]);
+  }
+  inputEventHandlers[INPUT.BACK] = function() {
+    // Close the current menu
+    openMenu(activeMenu, false);
+  }
+  inputEventHandlers[INPUT.MENU] = function() {
+    // Close all menus
+    while (activeMenu) {
+      openMenu(activeMenu, false);
+    }
   }
 
   game.gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
 
   return {
+    loadMenus: loadMenus,
     openMenu: openMenu,
-    update: update
+    update: update,
+    inputEventHandlers: inputEventHandlers
   };
 }
