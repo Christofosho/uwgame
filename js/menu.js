@@ -12,9 +12,9 @@ function MenuManager(display, input, game) {
     var jsonDfd = $.getJSON("data/menus.json");
     var menuDfds = new Array(menus.length);
     jsonDfd.done(function(result) {
-      menus = result;
-      for (var i in menus) {
-        var menu = menus[i];
+      for (var i in result) {
+        var menu = result[i];
+        menus[i] = menu;
         var itemDef = menu.itemDef;
         menu.image = new Kinetic.Image({
           x: menu.background.x,
@@ -38,6 +38,7 @@ function MenuManager(display, input, game) {
             fontFamily: "Arial", // TODO: don't hard-code the menu font here
             fontSize: itemDef.fontSize,
             fill: itemDef.fontColor,
+            align: itemDef.textAlign,
             width: itemDef.itemWidth,
             padding: itemDef.textPadding,
             visible: false
@@ -206,6 +207,7 @@ function MenuManager(display, input, game) {
   game.gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
 
   return {
+    menus: menus,
     loadMenus: loadMenus,
     openMenu: openMenu,
     update: update,
