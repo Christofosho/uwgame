@@ -7,6 +7,17 @@ function GameManager(display, input) {
   var menuActive = false;
   var gameEvents = new EventDispatcher();
   var map = new MapManager(display, input, gameEvents);
+  var mainMenu = null;
+  var pauseMenu = null;
+
+  function startGame() {
+    // TODO: load a different area based on the saved data
+    // Load the outside map, and close the menu when it is done loading.
+    // TODO: give some indication that the map is loading?
+    map.loadMap("data/UWGmap.json", 272, 160).done(function() {
+      menu.openMenu(mainMenu, false);
+    });
+  }
 
   // Define commands
   var commands = {
@@ -15,14 +26,17 @@ function GameManager(display, input) {
     },
     new: function() {
       // New game
+      startGame();
     },
     load: function() {
-      // Pull up load game screen
+      // TODO: Pull up load game screen
+      startGame();
     },
     save: function() {
     },
     quit: function() {
       // Go back to main menu
+      menu.openMenu(mainMenu, true);
     }
   };
 
@@ -33,7 +47,9 @@ function GameManager(display, input) {
   // While the menu is open, the menu handles inputs
   var inputEventHandlers = menu.inputEventHandlers;
   menu.loadMenus().done(function() {
-    menu.openMenu("main");
+    mainMenu = menu.menus["main"];
+    pauseMenu = menu.menus["pause"];
+    menu.openMenu(mainMenu);
   })
 
   function processInputs(inputQueue) {
@@ -51,12 +67,10 @@ function GameManager(display, input) {
     gameEvents.fireEvent(GAME_EVENT.UPDATE, time);
   }
 
-  // Load the outside map
-  map.loadMap("data/UWGmap.json", 272, 160);
-
   var game = {
     menuActive: menuActive,
     map: map,
+    menu: menu,
     processInputs: processInputs,
     update: update,
     commands: commands,
