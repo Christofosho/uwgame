@@ -46,11 +46,10 @@ function MenuManager(display, input, game) {
           display.menuLayer.add(item.text);
         }
         var menuDfd = loadMenuImages(menu);
-        menuDfd.done(function() {
+        menuDfd.done(function(menu) {
           menu.image.setImage(menu.background.image);
           if (menu.items.length) {
-            menu.items[0].image.setImage(menu.itemDef.selectedImage);
-            for (var j = 1; j < menu.items.length; j++) {
+            for (var j = 0; j < menu.items.length; j++) {
               menu.items[j].image.setImage(menu.itemDef.image);
             }
           }
@@ -58,7 +57,7 @@ function MenuManager(display, input, game) {
         menuDfds.push(menuDfd);
       }
       // Resolve once all menus have finished loading (or failed to load)
-      $.when.apply($, menuDfds).always(function() {
+      $.when.apply($, menuDfds).done(function() {
         deferred.resolve(menus);
       });
     });
@@ -70,11 +69,15 @@ function MenuManager(display, input, game) {
   }
 
   function loadMenuImages(menu) {
-    return $.when(
+    var deferred = $.Deferred();
+    $.when(
       loadImage(menu.background, "image"),
       loadImage(menu.itemDef, "image"),
       loadImage(menu.itemDef, "selectedImage")
-    );
+    ).done(function() {
+      deferred.resolve(menu);
+    });
+    return deferred.promise();
   }
   
   function loadImage(obj, property) {
@@ -85,8 +88,10 @@ function MenuManager(display, input, game) {
     image.onload = function() {
       deferred.resolve();
     };
+    // If the image fails to load, we still need to resolve the deferred
+    // so the calling code knows when the menus are done loading.
     image.onerror = function() {
-      deferred.reject();
+      deferred.resolve();
     };
     image.src = src;
     return deferred.promise();
