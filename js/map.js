@@ -351,7 +351,7 @@ function MapManager(display, input, gameEvents) {
   };
 
   gameEvents.addEventListener(GAME_EVENT.MOVE_MAP, shiftView);
-  gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
+  //gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
 
   return {
     loadMap: loadMap,

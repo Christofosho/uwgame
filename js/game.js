@@ -6,9 +6,27 @@
 function GameManager(display, input) {
   var menuActive = false;
   var gameEvents = new EventDispatcher();
-  var commands = {};
   var map = new MapManager(display, input, gameEvents);
-  var menu = new MenuManager(display, input);
+
+  // Define commands
+  var commands = {
+    closeMenu: function() {
+      inputEventHandlers = map.inputEventHandlers;
+    },
+    new: function() {
+      // New game
+    },
+    load: function() {
+      // Pull up load game screen
+    },
+    save: function() {
+    },
+    quit: function() {
+      // Go back to main menu
+    }
+  };
+
+  var menu = new MenuManager(display, input, { gameEvents: gameEvents, commands: commands });
 
   // Inputs can be sent to different modules, depending on what is currently active in the game.
   // During gameplay, the map handles inputs.
@@ -31,32 +49,17 @@ function GameManager(display, input) {
     gameEvents.fireEvent(GAME_EVENT.UPDATE, time);
   }
 
-  // Define commands
-  var commands = {
-    closeMenu: function() {
-      inputEventHandlers = map.inputEventHandlers;
-    },
-    new: function() {
-      // New game
-    },
-    load: function() {
-      // Pull up load game screen
-    },
-    save: function() {
-    },
-    quit: function() {
-      // Go back to main menu
-    }
-  };
-
   // Load the outside map
   map.loadMap("data/UWGmap.json", 272, 160);
 
-  return {
+  var game = {
     menuActive: menuActive,
     map: map,
     processInputs: processInputs,
     update: update,
+    commands: commands,
     gameEvents: gameEvents
   };
+
+  return game;
 }

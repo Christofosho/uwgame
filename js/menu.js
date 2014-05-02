@@ -15,7 +15,7 @@ function MenuManager(display, input, game) {
       for (var i in menus) {
         var menu = menus[i];
         var itemDef = menu.itemDef;
-        menuDfds[i] = loadMenuImages(menu]);
+        menuDfds[i] = loadMenuImages(menu);
         menu.image = new Kinetic.Image({
           x: menu.background.x,
           y: menu.background.y,
@@ -28,7 +28,7 @@ function MenuManager(display, input, game) {
           var y = itemDef.firstY + itemDef.itemHeight * j;
           item.image = new Kinetic.Image({
             x: x,
-            y: y
+            y: y,
             visible: false
           });
           item.text = new Kinetic.Text({
@@ -36,7 +36,8 @@ function MenuManager(display, input, game) {
             x: x,
             y: y,
             width: itemWidth,
-            height: itemHeight
+            height: itemHeight,
+            visible: false
           });
           display.menuLayer.add(item.image);
           display.menuLayer.add(item.text);
@@ -102,7 +103,7 @@ function MenuManager(display, input, game) {
     }
     if (open) {
       activeMenu = menus[menuName];
-      if (activeMenu.items.length > ) {
+      if (activeMenu.items.length > 0) {
         selectedIndex = 0;
         setMenuItemSelected(activeMenu, selectedIndex, true);
       } else {
@@ -170,7 +171,7 @@ function MenuManager(display, input, game) {
       executeMenuItem(activeMenu.items[selectedIndex]);
   }
   inputEventHandlers[INPUT.RIGHT] = function() {
-    if (activeMenu.parentMenu) {
+    if (activeMenu.parentMenu)
       openMenu(activeMenu, false);
   }
   inputEventHandlers[INPUT.ENTER] = function() {
@@ -184,4 +185,3 @@ function MenuManager(display, input, game) {
     update: update
   };
 }
-
