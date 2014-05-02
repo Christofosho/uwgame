@@ -315,8 +315,8 @@ function MapManager(display, input, gameEvents) {
     targetViewPos.y = view.y + movementVector.y;
 
     // Check if backround should be reloaded
-    // (Hopefully this will not happen too often since it is called when
-    // movement finishes)
+    // (Hopefully this will not happen too often since it only runs when
+    // an unloaded portion of the background is about to appear on the screen)
     if ((newColX !== undefined && (newColX < backgroundView.x || newColX >= backgroundView.x + backgroundView.width))
         || (newRowY !== undefined && (newRowY < backgroundView.y || newRowY >= backgroundView.y + backgroundView.height))) {
       loadBackgroundView();
