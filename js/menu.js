@@ -175,7 +175,7 @@ function MenuManager(display, input, game) {
   function update(time) {
     if (redraw) {
       display.menuLayer.draw();
-      //redraw = false;
+      redraw = false;
     }
   }
 
