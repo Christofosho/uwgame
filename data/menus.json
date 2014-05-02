@@ -1,4 +1,5 @@
 { "main":{
+    "closable":false,
     "background":{
       "image":"img/mainMenu.png",
       "x":0,

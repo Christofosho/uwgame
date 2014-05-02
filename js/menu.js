@@ -15,6 +15,10 @@ function MenuManager(display, input, game) {
       for (var i in result) {
         var menu = result[i];
         menus[i] = menu;
+        if (menu.closable === undefined) {
+          // Default to true
+          menu.closable = true;
+        }
         var itemDef = menu.itemDef;
         menu.image = new Kinetic.Image({
           x: menu.background.x,
@@ -195,12 +199,16 @@ function MenuManager(display, input, game) {
   }
   inputEventHandlers[INPUT.BACK] = function() {
     // Close the current menu
-    openMenu(activeMenu, false);
+    if (activeMenu.closable)
+      openMenu(activeMenu, false);
   }
   inputEventHandlers[INPUT.MENU] = function() {
     // Close all menus
     while (activeMenu) {
-      openMenu(activeMenu, false);
+      if (activeMenu.closable)
+        openMenu(activeMenu, false);
+      else
+        break;
     }
   }
 
