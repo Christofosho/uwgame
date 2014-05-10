@@ -19,36 +19,17 @@ function MenuManager(display, input, game) {
           // Default to true
           menu.closable = true;
         }
+        menu.group = new Kinetic.Group({
+          visible: false
+        });
         var itemDef = menu.itemDef;
         menu.image = new Kinetic.Image({
           x: menu.background.x,
-          y: menu.background.y,
-          visible: false
+          y: menu.background.y
         });
-        display.menuLayer.add(menu.image);
+        menu.group.add(menu.image);
         for (var j = 0; j < menu.items.length; j++) {
-          var item = menu.items[j];
-          var x = itemDef.firstX;
-          var y = itemDef.firstY + itemDef.itemHeight * j;
-          item.image = new Kinetic.Image({
-            x: x,
-            y: y,
-            visible: false
-          });
-          item.text = new Kinetic.Text({
-            text: item.label,
-            x: x,
-            y: y,
-            fontFamily: "Arial", // TODO: don't hard-code the menu font here
-            fontSize: itemDef.fontSize,
-            fill: itemDef.fontColor,
-            align: itemDef.textAlign,
-            width: itemDef.itemWidth,
-            padding: itemDef.textPadding,
-            visible: false
-          });
-          display.menuLayer.add(item.image);
-          display.menuLayer.add(item.text);
+          createMenuItem(menu, menu.items[j], itemDef, j);
         }
         var menuDfd = loadMenuImages(menu);
         menuDfd.done(function(menu) {
@@ -60,6 +41,7 @@ function MenuManager(display, input, game) {
           }
         });
         menuDfds.push(menuDfd);
+        display.menuLayer.add(menu.group);
       }
       // Resolve once all menus have finished loading (or failed to load)
       $.when.apply($, menuDfds).done(function() {
@@ -69,8 +51,40 @@ function MenuManager(display, input, game) {
     jsonDfd.fail(function(obj, errorType, error) {
       console.error("Failed to load menu data: " + error.stack);
       deferred.reject();
-    })
+    });
     return deferred.promise();
+  }
+
+  function createMenuItem(menu, item, itemDef, index) {
+    var x = itemDef.firstX;
+    var y = itemDef.firstY + itemDef.itemHeight * index;
+    item.image = new Kinetic.Image({
+      x: x,
+      y: y
+    });
+    item.text = new Kinetic.Text({
+      text: item.label,
+      x: x,
+      y: y,
+      fontFamily: "Arial", // TODO: don't hard-code the menu font here
+      fontSize: itemDef.fontSize,
+      fill: itemDef.fontColor,
+      align: itemDef.textAlign,
+      width: itemDef.itemWidth,
+      height: itemDef.itemHeight,
+      padding: itemDef.textPadding
+    });
+    item.text.on("mouseover", function(e) {
+      setSelectedIndex(index);
+    });
+    item.text.on("click", function(e) {
+      executeMenuItem(item);
+    });
+    item.text.on("tap", function(e) {
+      executeMenuItem(item);
+    });
+    menu.group.add(item.image);
+    menu.group.add(item.text);
   }
 
   function loadMenuImages(menu) {
@@ -114,31 +128,43 @@ function MenuManager(display, input, game) {
       open = true;
 
     menu.isOpen = open;
-    menu.image.setVisible(open);
-    for (var i = 0; i < menu.items.length; i++) {
-      menu.items[i].image.setVisible(open);
-      menu.items[i].text.setVisible(open);
-    }
+    menu.group.setVisible(open);
     if (open) {
-      activeMenu = menu;
+      activateMenu(menu, true);
       if (activeMenu.items.length > 0) {
         selectedIndex = 0;
         setMenuItemSelected(activeMenu, selectedIndex, true);
       } else {
         selectedIndex = -1;
       }
-    } else if (menu == activeMenu) {
+    } else if (menu == activateMenu) {
       // Closing the active menu. Activate the parent menu.
-      if (activeMenu.parentMenu) {
-        activeMenu = activeMenu.parentMenu;
-        selectedIndex = getSelectedIndex(activeMenu);
+      var currentMenu = activateMenu;
+      activateMenu(menu, false);
+      if (currentMenu.parentMenu) {
+        activateMenu(currentMenu.parentMenu);
       } else {
         // No parent menu. Release control to the game manager.
-        activeMenu = null;
         game.commands.closeMenu();
       }
     }
     redraw = true;
+  }
+
+  function activateMenu(menu, activate) {
+    if (activate === undefined) {
+      activate = true;
+    }
+    // Tell the menu items to listen / stop listening to mouse events
+    for (var i = 0; i < menu.items.length; i++) {
+      menu.items[i].text.setListening(activate);
+    }
+    if (activate) {
+      activeMenu = menu;
+    } else {
+      activeMenu = null;
+    }
+    selectedIndex = getSelectedIndex(activeMenu);
   }
 
   function setSelectedIndex(index) {
