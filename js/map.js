@@ -406,12 +406,7 @@ function MapManager(display, input, gameEvents) {
     resetMoveCmdsValidTime();
   };
 
-<<<<<<< HEAD
-  gameEvents.addEventListener(GAME_EVENT.MOVE_MAP, shiftView);
-  //gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
-=======
   gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
->>>>>>> master
 
   return {
     loadMap: loadMap,

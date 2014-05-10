@@ -179,30 +179,30 @@ function MenuManager(display, input, game) {
     }
   }
 
-  var inputEventHandlers = {};
-  inputEventHandlers[INPUT.UP] = function() {
+  var inputPressEventHandlers = {};
+  inputPressEventHandlers[INPUT.UP] = function() {
     setSelectedIndex(selectedIndex - 1);
   }
-  inputEventHandlers[INPUT.DOWN] = function() {
+  inputPressEventHandlers[INPUT.DOWN] = function() {
     setSelectedIndex(selectedIndex + 1);
   }
-  inputEventHandlers[INPUT.LEFT] = function() {
+  inputPressEventHandlers[INPUT.LEFT] = function() {
     if (activeMenu.items[selectedIndex].subMenu)
       executeMenuItem(activeMenu.items[selectedIndex]);
   }
-  inputEventHandlers[INPUT.RIGHT] = function() {
+  inputPressEventHandlers[INPUT.RIGHT] = function() {
     if (activeMenu.parentMenu)
       openMenu(activeMenu, false);
   }
-  inputEventHandlers[INPUT.ACTION] = function() {
+  inputPressEventHandlers[INPUT.ACTION] = function() {
     executeMenuItem(activeMenu.items[selectedIndex]);
   }
-  inputEventHandlers[INPUT.BACK] = function() {
+  inputPressEventHandlers[INPUT.BACK] = function() {
     // Close the current menu
     if (activeMenu.closable)
       openMenu(activeMenu, false);
   }
-  inputEventHandlers[INPUT.MENU] = function() {
+  inputPressEventHandlers[INPUT.MENU] = function() {
     // Close all menus
     while (activeMenu) {
       if (activeMenu.closable)
@@ -212,6 +212,8 @@ function MenuManager(display, input, game) {
     }
   }
 
+  var inputUnpressEventHandlers = {};
+
   game.gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
 
   return {
@@ -219,6 +221,7 @@ function MenuManager(display, input, game) {
     loadMenus: loadMenus,
     openMenu: openMenu,
     update: update,
-    inputEventHandlers: inputEventHandlers
+    inputPressEventHandlers: inputPressEventHandlers,
+    inputUnpressEventHandlers: inputUnpressEventHandlers
   };
 }

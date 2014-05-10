@@ -22,7 +22,8 @@ function GameManager(display, input) {
   // Define commands
   var commands = {
     closeMenu: function() {
-      inputEventHandlers = map.inputEventHandlers;
+      inputPressEventHandlers = map.inputPressEventHandlers;
+      inputUnpressEventHandlers = map.inputUnpressEventHandlers;
     },
     new: function() {
       // New game
@@ -36,6 +37,8 @@ function GameManager(display, input) {
     },
     quit: function() {
       // Go back to main menu
+      inputPressEventHandlers = menu.inputPressEventHandlers;
+      inputUnpressEventHandlers = menu.inputUnpressEventHandlers;
       menu.openMenu(mainMenu, true);
     }
   };
@@ -45,9 +48,8 @@ function GameManager(display, input) {
   // Inputs can be sent to different modules, depending on what is currently active in the game.
   // During gameplay, the map handles inputs.
   // While the menu is open, the menu handles inputs
-  var inputPressEventHandlers = map.inputPressEventHandlers;
-  var inputUnpressEventHandlers = map.inputUnpressEventHandlers;
-  var inputEventHandlers = menu.inputEventHandlers;
+  var inputPressEventHandlers = menu.inputPressEventHandlers;
+  var inputUnpressEventHandlers = menu.inputUnpressEventHandlers;
   menu.loadMenus().done(function() {
     mainMenu = menu.menus["main"];
     pauseMenu = menu.menus["pause"];
