@@ -1,6 +1,6 @@
 ﻿var GAME_EVENT = {
-  UPDATE: "update"
-  //MOVE_MAP: "moveMap"
+  UPDATE: "update",
+  MAP_UPDATE: "mapUpdate"
 };
 
 function GameManager(display, input) {

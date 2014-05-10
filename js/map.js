@@ -169,8 +169,13 @@ function MapManager(display, input, gameEvents) {
     // Only redraw if the map is not moving.
     // (If it is moving, it will get redrawn automatically)
     if (!moving) {
-      display.backgroundLayer.draw();
-      display.foregroundLayer.draw();
+      display.layersToUpdate.backgroundLayer = true;
+      display.layersToUpdate.foregroundLayer = true;
+      var viewPixel = {
+        x: view.x * tileSizePixels.width,
+        y: view.y * tileSizePixels.height
+      };
+      gameEvents.fireEvent(GAME_EVENT.MAP_UPDATE, viewPixel);
     }
   }
 
@@ -348,12 +353,19 @@ function MapManager(display, input, gameEvents) {
       }
 
       // Update screen
-      backgroundGroup.setX(Math.round(-view.x * tileSizePixels.width));
-      backgroundGroup.setY(Math.round(-view.y * tileSizePixels.height));
-      foregroundGroup.setX(Math.round(-view.x * tileSizePixels.width));
-      foregroundGroup.setY(Math.round(-view.y * tileSizePixels.height));
-      display.backgroundLayer.draw();
-      display.foregroundLayer.draw();
+      var viewPixel = {
+        x: Math.round(view.x * tileSizePixels.width),
+        y: Math.round(view.y * tileSizePixels.height)
+      };
+
+      backgroundGroup.setX(-viewPixel.x);
+      backgroundGroup.setY(-viewPixel.y);
+      foregroundGroup.setX(-viewPixel.x);
+      foregroundGroup.setY(-viewPixel.y);
+      display.layersToUpdate.backgroundLayer = true;
+      display.layersToUpdate.foregroundLayer = true;
+
+      gameEvents.fireEvent(GAME_EVENT.MAP_UPDATE, viewPixel);
     }
   }
 
