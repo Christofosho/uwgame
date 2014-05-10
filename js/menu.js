@@ -5,7 +5,6 @@ function MenuManager(display, input, game) {
   var menus = {};
   var activeMenu = null;
   var selectedIndex = -1;
-  var redraw = false;
 
   function loadMenus() {
     var deferred = $.Deferred();
@@ -148,7 +147,7 @@ function MenuManager(display, input, game) {
         game.commands.closeMenu();
       }
     }
-    redraw = true;
+    display.layersToUpdate.menuLayer = true;
   }
 
   function activateMenu(menu, activate) {
@@ -188,7 +187,7 @@ function MenuManager(display, input, game) {
   function setMenuItemSelected(menu, index, selected) {
     var image = (selected ? menu.itemDef.selectedImage : menu.itemDef.image);
     menu.items[index].image.setImage(image);
-    redraw = true;
+    display.layersToUpdate.menuLayer = true;
   }
 
   function executeMenuItem(menuItem) {
@@ -196,13 +195,6 @@ function MenuManager(display, input, game) {
       game.commands[menuItem.command]();
     if (menuItem.subMenu)
       openMenu(menuItem.subMenu);
-  }
-
-  function update(time) {
-    if (redraw) {
-      display.menuLayer.draw();
-      redraw = false;
-    }
   }
 
   var inputPressEventHandlers = {};
@@ -240,13 +232,10 @@ function MenuManager(display, input, game) {
 
   var inputUnpressEventHandlers = {};
 
-  game.gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
-
   return {
     menus: menus,
     loadMenus: loadMenus,
     openMenu: openMenu,
-    update: update,
     inputPressEventHandlers: inputPressEventHandlers,
     inputUnpressEventHandlers: inputUnpressEventHandlers
   };
