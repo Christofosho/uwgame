@@ -1,6 +1,6 @@
 ﻿var GAME_EVENT = {
   UPDATE: "update",
-  MOVE_MAP: "moveMap"
+  MAP_UPDATE: "mapUpdate"
 };
 
 function GameManager(display, input) {
@@ -45,6 +45,8 @@ function GameManager(display, input) {
   // Inputs can be sent to different modules, depending on what is currently active in the game.
   // During gameplay, the map handles inputs.
   // While the menu is open, the menu handles inputs
+  var inputPressEventHandlers = map.inputPressEventHandlers;
+  var inputUnpressEventHandlers = map.inputUnpressEventHandlers;
   var inputEventHandlers = menu.inputEventHandlers;
   menu.loadMenus().done(function() {
     mainMenu = menu.menus["main"];
@@ -54,9 +56,16 @@ function GameManager(display, input) {
 
   function processInputs(inputQueue) {
     for (var i = 0; i < inputQueue.length; i++) {
-      var input = inputQueue[i];
-      if (inputEventHandlers[input])
-        inputEventHandlers[input]();
+      var input = inputQueue[i].input;
+      if (inputQueue[i].press) {
+        if (inputPressEventHandlers[input]) {
+          inputPressEventHandlers[input]();
+        }
+      } else {
+        if (inputUnpressEventHandlers[input]) {
+          inputUnpressEventHandlers[input]();
+        }
+      }
     }
     // Clear the array
     inputQueue.length = 0;

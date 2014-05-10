@@ -6,7 +6,10 @@ function InputManager() {
   // Contains the state of each input (pressed or unpressed)
   var inputStates = {};
   for (i in INPUT) {
-    inputStates[INPUT[i]] = { pressed: false };
+    inputStates[INPUT[i]] = {
+      pressed: false,
+      pressedTime: 0,
+      repeat: false };
   }
 
   // A queue that contains inputs that have been received but not processed
@@ -47,8 +50,13 @@ function InputManager() {
     var input = keyboardMap[event.which];
     if (input) {
       event.preventDefault();
+      if (!inputStates[input].pressed) {
+        inputStates[input].pressedTime = new Date().getTime();
+      } else {
+        inputStates[input].repeat = true;
+      }
       inputStates[input].pressed = true;
-      inputQueue.push(input);
+      inputQueue.push({ input: input, press: true });
     }
   }
 
@@ -57,6 +65,8 @@ function InputManager() {
     if (input) {
       event.preventDefault();
       inputStates[input].pressed = false;
+      inputStates[input].repeat = false;
+      inputQueue.push({ input: input, press: false });
     }
   }
 

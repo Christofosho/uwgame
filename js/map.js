@@ -7,11 +7,16 @@ function MapManager(display, input, gameEvents) {
 
   // Keep track of whether the map is currently moving
   var moving = false;
-  var movingIntervalId;
 
   // Map coordinates of the view. Indicates which tiles are currently in the view.
   var view = { x: 0, y: 0, width: null, height: null };
   var backgroundView = { x: 0, y: 0, width: null, height: null };
+
+  // Position of player with respect to view
+  var playerViewPos = { x: 0, y: 0 };
+
+  // Position of player on the screen (in tiles)
+  var playerScreenPos = { x: 0, y: 0 };
 
   // Array of individual tile images
   var tileImages = null;
@@ -63,8 +68,8 @@ function MapManager(display, input, gameEvents) {
   foregroundGroup.add(foreground);
   display.foregroundLayer.add(foregroundGroup);
 
-  /*============================= FUNCTIONS ==================================*/
-  // Load a new map file
+  /*===================== LOAD MAP AND DRAW MAP FUNCTIONS ====================*/
+  // Load a new map file for a given player position
   function loadMap(url, x, y) {
     var dfd = $.Deferred();
     // Load JSON file
@@ -99,6 +104,10 @@ function MapManager(display, input, gameEvents) {
     tileSizePixels.width = map.tilewidth;
     view.width = Math.ceil(display.stageSizePixels.width / tileSizePixels.width);
     view.height = Math.ceil(display.stageSizePixels.height / tileSizePixels.height);
+    playerViewPos.x = Math.floor(view.width / 2);
+    playerViewPos.y = Math.floor(view.height / 2);
+    playerScreenPos.x = playerViewPos.x - TILE_BUFFER_SIZE;
+    playerScreenPos.y = playerViewPos.y - TILE_BUFFER_SIZE;
 
     backgroundView.x = view.x - TILE_BUFFER_SIZE;
     backgroundView.y = view.y - TILE_BUFFER_SIZE;
@@ -127,11 +136,11 @@ function MapManager(display, input, gameEvents) {
     hiddenForegroundCanvas.height = backgroundView.height * tileSizePixels.height;
   }
 
-  // Load all tiles in given view area
+  // Load all tiles for a given player position
   function loadView(x, y) {
     // Set view
-    view.x = x;
-    view.y = y;
+    view.x = x - playerViewPos.x;
+    view.y = y - playerViewPos.y;
     backgroundGroup.setX(-view.x * tileSizePixels.width);
     backgroundGroup.setY(-view.y * tileSizePixels.height);
     foregroundGroup.setX(-view.x * tileSizePixels.width);
@@ -160,8 +169,13 @@ function MapManager(display, input, gameEvents) {
     // Only redraw if the map is not moving.
     // (If it is moving, it will get redrawn automatically)
     if (!moving) {
-      display.backgroundLayer.draw();
-      display.foregroundLayer.draw();
+      display.layersToUpdate.backgroundLayer = true;
+      display.layersToUpdate.foregroundLayer = true;
+      var viewPixels = {
+        x: view.x * tileSizePixels.width,
+        y: view.y * tileSizePixels.height
+      };
+      gameEvents.fireEvent(GAME_EVENT.MAP_UPDATE, viewPixels);
     }
   }
 
@@ -205,123 +219,156 @@ function MapManager(display, input, gameEvents) {
     }
   }
 
-  function attemptMove() {
-    if (moving) {
-      return;
-    }
-
-    var distance = { x: 0, y: 0 };
-    if (input.inputStates[INPUT.UP].pressed)
-      distance.y--;
-    if (input.inputStates[INPUT.DOWN].pressed)
-      distance.y++;
-    if (input.inputStates[INPUT.RIGHT].pressed)
-      distance.x++;
-    if (input.inputStates[INPUT.LEFT].pressed)
-      distance.x--;
-
-    // TODO: run collision and bounds checks
-
-    gameEvents.fireEvent(GAME_EVENT.MOVE_MAP, distance);
+  function getPlayerPosition() {
+    return { x: Math.round(view.x + playerViewPos.x),
+             y: Math.round(view.y + playerViewPos.y) };
   }
 
-  // Moves the background by 1 tile in the specified direction(s). Will also reload the background image if necessary.
-  function shiftView(distance) {
-    moving = true;
+  /*===================== MOVEMENT COMMANDS HANDLING =========================*/
+  // Queue to store movement commands. Handling these is delayed by a time in 
+  // order to ensure diagonal commands are handled properly.
+  var moveCmdQueue = [];
 
-    // Record the current view
-    var oldView = {};
-    oldView.x = view.x;
-    oldView.y = view.y;
+  // Movement speed
+  var tilesPerMs = 5 / 1000;
 
-    // Determine movement direction
-    // TODO: use distance parameter instead of looking at inputs
-    var nDirections = 0;
-    if (input.inputStates[INPUT.UP].pressed) {
-      view.y--;
-      var newRowY = view.y;
-      nDirections++;
-    } else if (input.inputStates[INPUT.DOWN].pressed) {
-      view.y++;
-      var newRowY = view.y + view.height - 1;
-      nDirections++;
-    }
-    if (input.inputStates[INPUT.RIGHT].pressed) {
-      view.x++;
-      var newColX = view.x + view.width - 1;
-      nDirections++;
-    } else if (input.inputStates[INPUT.LEFT].pressed) {
-      view.x--;
-      var newColX = view.x;
-      nDirections++;
-    }
+  // Direction of movement
+  var movementVector = { x: 0, y: 0, diagonal: false };
 
-    // check that there is actually a move operation
-    if (nDirections == 0) {
-      moving = false;
+  // Next view position to move to
+  var targetViewPos = { x: 0, y: 0 };
+
+  // Commands that are processed as movement commands
+  var MOVECOMMANDS = [INPUT.UP, INPUT.DOWN, INPUT.RIGHT, INPUT.LEFT];
+
+  // Time after which commands are valid. This is put slightly in the future
+  // whenever a new command is received
+  var moveCmdsValidTime = new Date().getTime();
+  var moveCmdDelay = 30; // ms
+
+  // Sets command valid time a delay in the future
+  function resetMoveCmdsValidTime() {
+    moveCmdsValidTime = new Date().getTime() + moveCmdDelay;
+  }
+
+  // Receives input commands and stores non-repeated commands onto queue
+  function handleMoveCommandInput(receivedInput) {
+    // ignore repeats
+    if (input.inputStates[receivedInput].repeat) {
       return;
     }
-    // Determine if movement is diagonal
-    var diagonal = (nDirections == 2);
+    resetMoveCmdsValidTime();
+    moveCmdQueue.push(receivedInput);
+  }
 
-    // Reload the background view here ONLY if we have to. This is a slow process so it's
-    // better to do this when the player is not moving, if we get a chance.
-    // This code should only run if the player runs in the same direction for a while without stopping.
-    if ((newColX !== undefined && (newColX < backgroundView.x || newColX >= backgroundView.x + backgroundView.width))
-       || (newRowY !== undefined && (newRowY < backgroundView.y || newRowY >= backgroundView.y + backgroundView.height))) {
+  // If currently not moving, and if commands are valid (not in transition time),
+  // then process all held commands and commands in queue
+  function checkProcessMoveCmds() {
+    if (moving || new Date().getTime() < moveCmdsValidTime) {
+      // Nothing to do if moving or commands are not valid
+      return;
+    }
+
+    // Add all pressed commands to a queue
+    var pressedMoveCmds = [];
+    for (var i = 0; i < MOVECOMMANDS.length; i++) {
+      if (input.inputStates[MOVECOMMANDS[i]].pressed) {
+        pressedMoveCmds.push(MOVECOMMANDS[i]);
+      }
+    }
+
+    // Process pressed and received commands
+    processMoveCmds(pressedMoveCmds.concat(moveCmdQueue));
+
+    // Clear command queue
+    moveCmdQueue.length = 0;
+  }
+
+  // Processes an array of movement commands and determines movement direction
+  // TODO: check if movement in that direction is possible
+  // then issues a command to move in that direction
+  function processMoveCmds(cmds) {
+    // Determine movement vector and any new rows/cols on screen
+    // Use indexOf in order to ensure each commands is processed once
+    movementVector = { x: 0, y: 0 };
+    if (cmds.indexOf(INPUT.UP) >= 0) {
+      movementVector.y--;
+    }
+    if (cmds.indexOf(INPUT.DOWN) >= 0) {
+      movementVector.y++;
+    }
+    if (cmds.indexOf(INPUT.LEFT) >= 0) {
+      movementVector.x--;
+    }
+    if (cmds.indexOf(INPUT.RIGHT) >= 0) {
+      movementVector.x++;
+    }
+
+    // Check for zero movement (i.e. if opposite directions are both pressed)
+    if (movementVector.x == 0 && movementVector.y == 0) {
+      return;
+    }
+
+    // We are moving! Setup for movement
+    moving = true;
+    movementVector.diagonal = (movementVector.x != 0 && movementVector.y != 0);
+    targetViewPos.x = view.x + movementVector.x;
+    targetViewPos.y = view.y + movementVector.y;
+
+    // Check if backround should be reloaded
+    // (Hopefully this will not happen too often since it only runs when
+    // an unloaded portion of the background is about to appear on the screen)
+    if (view.x + movementVector.x < backgroundView.x
+        || view.x + view.width + movementVector.x - 1 >= backgroundView.x + backgroundView.width
+        || view.y + movementVector.y < backgroundView.y
+        || view.y + view.height + movementVector.y - 1 >= backgroundView.y + backgroundView.height) {
       loadBackgroundView();
     }
+  }
 
-    // TODO: determine duration based on a speed
-    var duration = 100; // milliseconds
-    if (diagonal) {
-      duration *= 1.414; // about sqrt(2)
-    }
-    // TODO: make frameRate configurable?
-    var frameRate = 30; // frames per second (fps)
-    var totalFrames = Math.round(frameRate * duration / 1000);
-    var currentFrame = 0;
-    
-    // Use a custom tween function to move the background, since the KineticJS tween causes problems due to
-    // placing images on 1/2 pixels and multiple layers need to be moved in unison
-    function moveBackground() {
-      // During each frame, update the background position
-      currentFrame++;
-      var pixelsX = -Math.round(((view.x - oldView.x) * currentFrame / totalFrames + oldView.x) * tileSizePixels.width);
-      var pixelsY = -Math.round(((view.y - oldView.y) * currentFrame / totalFrames + oldView.y) * tileSizePixels.height);
-      backgroundGroup.setX(pixelsX);
-      backgroundGroup.setY(pixelsY);
-      foregroundGroup.setX(pixelsX);
-      foregroundGroup.setY(pixelsY);
-      display.backgroundLayer.draw();
-      display.foregroundLayer.draw();
+  // Update function
+  function update(deltaTime) {
+    checkProcessMoveCmds();
 
-      if (currentFrame == totalFrames) {
-        // Last frame
-        clearInterval(movingIntervalId);
+    // Update background if moving
+    if (moving) {
+      view.x += movementVector.x * tilesPerMs * (movementVector.diagonal ? 0.707 : 1) * deltaTime;
+      view.y += movementVector.y * tilesPerMs * (movementVector.diagonal ? 0.707 : 1) * deltaTime;
+
+      // If movement is complete:
+      if ((targetViewPos.x - view.x) * movementVector.x <= 0 &&
+          (targetViewPos.y - view.y) * movementVector.y <= 0) {
+        // Set the final location
+        view.x = targetViewPos.x;
+        view.y = targetViewPos.y;
         moving = false;
-        // Continue moving if a key is pressed
-        if (input.inputStates[INPUT.UP].pressed ||
-            input.inputStates[INPUT.DOWN].pressed ||
-            input.inputStates[INPUT.RIGHT].pressed ||
-            input.inputStates[INPUT.LEFT].pressed) {
-          shiftView();
-        } else {
-          // Player has stopped moving. If the view is currently within the
-          // reload threshold, update the background image.
-          if (view.x - backgroundView.x < BG_RELOAD_THRESHOLD ||
-              view.y - backgroundView.y < BG_RELOAD_THRESHOLD ||
-              backgroundView.x + backgroundView.width - view.x - view.width < BG_RELOAD_THRESHOLD ||
-              backgroundView.y + backgroundView.height - view.y - view.height < BG_RELOAD_THRESHOLD) {
-            // Reload the background at a later time, so we don't cause lag for
-            // the last animation frame
-            setTimeout(loadBackgroundView);
-          }
+
+        checkProcessMoveCmds();
+        // If there is no continued movement, reload the background
+        if (!moving &&
+            (view.x + movementVector.x < backgroundView.x + BG_RELOAD_THRESHOLD
+            || view.x + view.width + movementVector.x - 1 >= backgroundView.x + backgroundView.width - BG_RELOAD_THRESHOLD
+            || view.y + movementVector.y < backgroundView.y + BG_RELOAD_THRESHOLD
+            || view.y + view.height + movementVector.y - 1 >= backgroundView.y + backgroundView.height - BG_RELOAD_THRESHOLD)) {
+          setTimeout(loadBackgroundView());
         }
       }
-    };
 
-    movingIntervalId = setInterval(moveBackground, 1000 / frameRate);
+      // Update screen
+      var viewPixel = {
+        x: Math.round(view.x * tileSizePixels.width),
+        y: Math.round(view.y * tileSizePixels.height)
+      };
+
+      backgroundGroup.setX(-viewPixel.x);
+      backgroundGroup.setY(-viewPixel.y);
+      foregroundGroup.setX(-viewPixel.x);
+      foregroundGroup.setY(-viewPixel.y);
+      display.layersToUpdate.backgroundLayer = true;
+      display.layersToUpdate.foregroundLayer = true;
+
+      gameEvents.fireEvent(GAME_EVENT.MAP_UPDATE, viewPixel);
+    }
   }
 
   /*============================= INITIALISE =================================*/
@@ -331,31 +378,47 @@ function MapManager(display, input, gameEvents) {
   emptyTileImage.src = "img/empty.png";
 
   // Handle input events to trigger map movement.
-  // Insert a delay so that if diagonal movement is desired, 
-  // both keys are pressed prior to processing
-  // TODO: make delay configurable?
-  var inputHandleDelay = 50; // ms
-
-  var inputEventHandlers = {};
-  inputEventHandlers[INPUT.UP] = function() {
-    setTimeout( attemptMove, inputHandleDelay );
+  var inputPressEventHandlers = {};
+  inputPressEventHandlers[INPUT.UP] = function() {
+    handleMoveCommandInput(INPUT.UP);
   };
-  inputEventHandlers[INPUT.DOWN] = function() {
-    setTimeout( attemptMove, inputHandleDelay);
+  inputPressEventHandlers[INPUT.DOWN] = function() {
+    handleMoveCommandInput(INPUT.DOWN);
   };
-  inputEventHandlers[INPUT.LEFT] = function() {
-    setTimeout( attemptMove, inputHandleDelay);
+  inputPressEventHandlers[INPUT.LEFT] = function() {
+    handleMoveCommandInput(INPUT.LEFT);
   };
-  inputEventHandlers[INPUT.RIGHT] = function() {
-    setTimeout( attemptMove, inputHandleDelay);
+  inputPressEventHandlers[INPUT.RIGHT] = function() {
+    handleMoveCommandInput(INPUT.RIGHT);
   };
 
+  var inputUnpressEventHandlers = {};
+  inputUnpressEventHandlers[INPUT.UP] = function() {
+    resetMoveCmdsValidTime();
+  };
+  inputUnpressEventHandlers[INPUT.DOWN] = function() {
+    resetMoveCmdsValidTime();
+  };
+  inputUnpressEventHandlers[INPUT.LEFT] = function() {
+    resetMoveCmdsValidTime();
+  };
+  inputUnpressEventHandlers[INPUT.RIGHT] = function() {
+    resetMoveCmdsValidTime();
+  };
+
+<<<<<<< HEAD
   gameEvents.addEventListener(GAME_EVENT.MOVE_MAP, shiftView);
   //gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
+=======
+  gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
+>>>>>>> master
 
   return {
     loadMap: loadMap,
     loadView: loadView,
-    inputEventHandlers: inputEventHandlers
+    inputPressEventHandlers: inputPressEventHandlers,
+    inputUnpressEventHandlers: inputUnpressEventHandlers,
+    getPlayerPosition: getPlayerPosition,
+    update: update
   };
 }
