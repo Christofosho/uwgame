@@ -52,7 +52,6 @@ function InputManager() {
       event.preventDefault();
       if (!inputStates[input].pressed) {
         inputStates[input].pressedTime = new Date().getTime();
-        inputStates[input].repeat = false;
       } else {
         inputStates[input].repeat = true;
       }
@@ -66,6 +65,7 @@ function InputManager() {
     if (input) {
       event.preventDefault();
       inputStates[input].pressed = false;
+      inputStates[input].repeat = false;
       inputQueue.push({ input: input, press: false });
     }
   }

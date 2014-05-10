@@ -171,11 +171,11 @@ function MapManager(display, input, gameEvents) {
     if (!moving) {
       display.layersToUpdate.backgroundLayer = true;
       display.layersToUpdate.foregroundLayer = true;
-      var viewPixel = {
+      var viewPixels = {
         x: view.x * tileSizePixels.width,
         y: view.y * tileSizePixels.height
       };
-      gameEvents.fireEvent(GAME_EVENT.MAP_UPDATE, viewPixel);
+      gameEvents.fireEvent(GAME_EVENT.MAP_UPDATE, viewPixels);
     }
   }
 
@@ -292,20 +292,16 @@ function MapManager(display, input, gameEvents) {
     // Use indexOf in order to ensure each commands is processed once
     movementVector = { x: 0, y: 0 };
     if (cmds.indexOf(INPUT.UP) >= 0) {
-          movementVector.y--;
-          var newRowY = view.y - 1;
+      movementVector.y--;
     }
     if (cmds.indexOf(INPUT.DOWN) >= 0) {
-          var newRowY = view.y + view.height;
-          movementVector.y++;
+      movementVector.y++;
     }
     if (cmds.indexOf(INPUT.LEFT) >= 0) {
-          var newColX = view.x - 1;
-          movementVector.x--;
+      movementVector.x--;
     }
     if (cmds.indexOf(INPUT.RIGHT) >= 0) {
-          var newColX = view.x + view.width;
-          movementVector.x++;
+      movementVector.x++;
     }
 
     // Check for zero movement (i.e. if opposite directions are both pressed)
@@ -322,8 +318,10 @@ function MapManager(display, input, gameEvents) {
     // Check if backround should be reloaded
     // (Hopefully this will not happen too often since it only runs when
     // an unloaded portion of the background is about to appear on the screen)
-    if ((newColX !== undefined && (newColX < backgroundView.x || newColX >= backgroundView.x + backgroundView.width))
-        || (newRowY !== undefined && (newRowY < backgroundView.y || newRowY >= backgroundView.y + backgroundView.height))) {
+    if (view.x + movementVector.x < backgroundView.x
+        || view.x + view.width + movementVector.x - 1 >= backgroundView.x + backgroundView.width
+        || view.y + movementVector.y < backgroundView.y
+        || view.y + view.height + movementVector.y - 1 >= backgroundView.y + backgroundView.height) {
       loadBackgroundView();
     }
   }
@@ -347,7 +345,11 @@ function MapManager(display, input, gameEvents) {
 
         checkProcessMoveCmds();
         // If there is no continued movement, reload the background
-        if (!moving) {
+        if (!moving &&
+            (view.x + movementVector.x < backgroundView.x + BG_RELOAD_THRESHOLD
+            || view.x + view.width + movementVector.x - 1 >= backgroundView.x + backgroundView.width - BG_RELOAD_THRESHOLD
+            || view.y + movementVector.y < backgroundView.y + BG_RELOAD_THRESHOLD
+            || view.y + view.height + movementVector.y - 1 >= backgroundView.y + backgroundView.height - BG_RELOAD_THRESHOLD)) {
           setTimeout(loadBackgroundView());
         }
       }

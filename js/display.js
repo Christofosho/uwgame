@@ -88,7 +88,7 @@ function DisplayManager(stageSizePixels) {
     return deferred;
   }
 
-  function update() {
+  function draw() {
     // Check for any layers that need update
     if (layersToUpdate.backgroundLayer) {
       backgroundLayer.draw();
@@ -170,6 +170,6 @@ function DisplayManager(stageSizePixels) {
 
     // Functions
     loadTileSets: loadTileSets,
-    update: update
+    draw: draw
   };
 }
