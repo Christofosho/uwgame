@@ -136,9 +136,9 @@ function MenuManager(display, input, game) {
       } else {
         selectedIndex = -1;
       }
-    } else if (menu == activateMenu) {
+    } else if (menu == activeMenu) {
       // Closing the active menu. Activate the parent menu.
-      var currentMenu = activateMenu;
+      var currentMenu = activeMenu;
       activateMenu(menu, false);
       if (currentMenu.parentMenu) {
         activateMenu(currentMenu.parentMenu);
@@ -160,10 +160,10 @@ function MenuManager(display, input, game) {
     }
     if (activate) {
       activeMenu = menu;
+      selectedIndex = getSelectedIndex(activeMenu);
     } else {
       activeMenu = null;
     }
-    selectedIndex = getSelectedIndex(activeMenu);
   }
 
   function setSelectedIndex(index) {
@@ -197,30 +197,30 @@ function MenuManager(display, input, game) {
       openMenu(menuItem.subMenu);
   }
 
-  var inputPressEventHandlers = {};
-  inputPressEventHandlers[INPUT.UP] = function() {
+  var inputHandler = new InputHandler();
+  inputHandler.pressEventHandlers[INPUT.UP] = function() {
     setSelectedIndex(selectedIndex - 1);
   }
-  inputPressEventHandlers[INPUT.DOWN] = function() {
+  inputHandler.pressEventHandlers[INPUT.DOWN] = function() {
     setSelectedIndex(selectedIndex + 1);
   }
-  inputPressEventHandlers[INPUT.LEFT] = function() {
+  inputHandler.pressEventHandlers[INPUT.LEFT] = function() {
     if (activeMenu.items[selectedIndex].subMenu)
       executeMenuItem(activeMenu.items[selectedIndex]);
   }
-  inputPressEventHandlers[INPUT.RIGHT] = function() {
+  inputHandler.pressEventHandlers[INPUT.RIGHT] = function() {
     if (activeMenu.parentMenu)
       openMenu(activeMenu, false);
   }
-  inputPressEventHandlers[INPUT.ACTION] = function() {
+  inputHandler.pressEventHandlers[INPUT.ACTION] = function() {
     executeMenuItem(activeMenu.items[selectedIndex]);
   }
-  inputPressEventHandlers[INPUT.BACK] = function() {
+  inputHandler.pressEventHandlers[INPUT.BACK] = function() {
     // Close the current menu
     if (activeMenu.closable)
       openMenu(activeMenu, false);
   }
-  inputPressEventHandlers[INPUT.MENU] = function() {
+  inputHandler.pressEventHandlers[INPUT.MENU] = function() {
     // Close all menus
     while (activeMenu) {
       if (activeMenu.closable)
@@ -230,13 +230,10 @@ function MenuManager(display, input, game) {
     }
   }
 
-  var inputUnpressEventHandlers = {};
-
   return {
     menus: menus,
     loadMenus: loadMenus,
     openMenu: openMenu,
-    inputPressEventHandlers: inputPressEventHandlers,
-    inputUnpressEventHandlers: inputUnpressEventHandlers
+    inputHandler: inputHandler
   };
 }
