@@ -62,14 +62,14 @@ function InputManager() {
   function keyDown(event) {
     var input = keyboardMap[event.which];
     if (input) {
+      // Prevent the default key behaviour in the browser
       event.preventDefault();
+
       if (!activeInputStates[input].pressed) {
         activeInputStates[input].pressedTime = new Date().getTime();
-      } else {
-        activeInputStates[input].repeat = true;
       }
+      inputQueue.push({ input: input, press: true, repeat: activeInputStates[input].pressed });
       activeInputStates[input].pressed = true;
-      inputQueue.push({ input: input, press: true });
     }
   }
 
@@ -78,8 +78,7 @@ function InputManager() {
     if (input) {
       event.preventDefault();
       activeInputStates[input].pressed = false;
-      activeInputStates[input].repeat = false;
-      inputQueue.push({ input: input, press: false });
+      inputQueue.push({ input: input, press: false, repeat: false });
     }
   }
 
@@ -94,14 +93,15 @@ function InputManager() {
       return;
     }
     for (var i = 0; i < inputQueue.length; i++) {
-      var input = inputQueue[i].input;
+      var event = inputQueue[i];
+      var input = event.input;
       if (inputQueue[i].press) {
         if (target.pressEventHandlers[input]) {
-          target.pressEventHandlers[input]();
+          target.pressEventHandlers[input](event);
         }
       } else {
         if (target.releaseEventHandlers[input]) {
-          target.releaseEventHandlers[input]();
+          target.releaseEventHandlers[input](event);
         }
       }
     }

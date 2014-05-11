@@ -252,13 +252,16 @@ function MapManager(display, input, gameEvents) {
   }
 
   // Receives input commands and stores non-repeated commands onto queue
-  function handleMoveCommandInput(receivedInput) {
+  function handleMoveCommandInput(event) {
     // ignore repeats
-    if (inputHandler.states[receivedInput].repeat) {
+    if (event.repeat) {
       return;
     }
     resetMoveCmdsValidTime();
-    moveCmdQueue.push(receivedInput);
+    if (!event.press) {
+      return;
+    }
+    moveCmdQueue.push(event.input);
   }
 
   // If currently not moving, and if commands are valid (not in transition time),
@@ -343,6 +346,7 @@ function MapManager(display, input, gameEvents) {
         view.y = targetViewPos.y;
         moving = false;
 
+        // Check for continued movement
         checkProcessMoveCmds();
         // If there is no continued movement, reload the background
         if (!moving &&
@@ -379,31 +383,10 @@ function MapManager(display, input, gameEvents) {
 
   // Handle input events to trigger map movement.
   var inputHandler = new InputHandler();
-  inputHandler.pressEventHandlers[INPUT.UP] = function() {
-    handleMoveCommandInput(INPUT.UP);
-  };
-  inputHandler.pressEventHandlers[INPUT.DOWN] = function() {
-    handleMoveCommandInput(INPUT.DOWN);
-  };
-  inputHandler.pressEventHandlers[INPUT.LEFT] = function() {
-    handleMoveCommandInput(INPUT.LEFT);
-  };
-  inputHandler.pressEventHandlers[INPUT.RIGHT] = function() {
-    handleMoveCommandInput(INPUT.RIGHT);
-  };
-
-  inputHandler.releaseEventHandlers[INPUT.UP] = function() {
-    resetMoveCmdsValidTime();
-  };
-  inputHandler.releaseEventHandlers[INPUT.DOWN] = function() {
-    resetMoveCmdsValidTime();
-  };
-  inputHandler.releaseEventHandlers[INPUT.LEFT] = function() {
-    resetMoveCmdsValidTime();
-  };
-  inputHandler.releaseEventHandlers[INPUT.RIGHT] = function() {
-    resetMoveCmdsValidTime();
-  };
+  for (var i = 0; i < MOVECOMMANDS.length; i++) {
+    inputHandler.pressEventHandlers[MOVECOMMANDS[i]] = handleMoveCommandInput;
+    inputHandler.releaseEventHandlers[MOVECOMMANDS[i]] = handleMoveCommandInput;
+  }
 
   gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
 
