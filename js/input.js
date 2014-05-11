@@ -3,18 +3,31 @@ function InputManager() {
 
   /* ============================== VARIABLES =============================== */
 
-  // Contains the state of each input (pressed or unpressed)
-  var inputStates = {};
-  for (i in INPUT) {
-    inputStates[INPUT[i]] = {
-      pressed: false,
-      pressedTime: 0,
-      repeat: false };
-  }
+  // Contains the state of each input (pressed or released)
+  var activeInputStates = new InputHandler().states;
+  // A set of blank input states that always say that each input is released.
+  // These are used to ensure that only the input target has access to the
+  // correct states.
+  var blankInputStates = new InputHandler().states;
 
   // A queue that contains inputs that have been received but not processed
   // Inputs will be added by the ImputManager and removed by the application
   var inputQueue = [];
+
+  // Inputs can be sent to different modules, depending on what is currently active in the game.
+  // During gameplay, the map handles inputs.
+  // While the menu is open, the menu handles inputs.
+  var target = null;
+
+  function setInputTarget(value) {
+    if (target != null) {
+      target.states = blankInputStates;
+    }
+    target = value;
+    if (target != null) {
+      target.states = activeInputStates;
+    }
+  }
 
   /* Keyboard Map:
      Map the keyboard inputs (from event.which) to the INPUT
@@ -50,12 +63,12 @@ function InputManager() {
     var input = keyboardMap[event.which];
     if (input) {
       event.preventDefault();
-      if (!inputStates[input].pressed) {
-        inputStates[input].pressedTime = new Date().getTime();
+      if (!activeInputStates[input].pressed) {
+        activeInputStates[input].pressedTime = new Date().getTime();
       } else {
-        inputStates[input].repeat = true;
+        activeInputStates[input].repeat = true;
       }
-      inputStates[input].pressed = true;
+      activeInputStates[input].pressed = true;
       inputQueue.push({ input: input, press: true });
     }
   }
@@ -64,8 +77,8 @@ function InputManager() {
     var input = keyboardMap[event.which];
     if (input) {
       event.preventDefault();
-      inputStates[input].pressed = false;
-      inputStates[input].repeat = false;
+      activeInputStates[input].pressed = false;
+      activeInputStates[input].repeat = false;
       inputQueue.push({ input: input, press: false });
     }
   }
@@ -74,8 +87,30 @@ function InputManager() {
   $(document).keydown(keyDown);
   $(document).keyup(keyUp);
 
+  function processInputs() {
+    if (!target) {
+      // No module is ready to handle events.
+      inputQueue.length = 0;
+      return;
+    }
+    for (var i = 0; i < inputQueue.length; i++) {
+      var input = inputQueue[i].input;
+      if (inputQueue[i].press) {
+        if (target.pressEventHandlers[input]) {
+          target.pressEventHandlers[input]();
+        }
+      } else {
+        if (target.releaseEventHandlers[input]) {
+          target.releaseEventHandlers[input]();
+        }
+      }
+    }
+    // Clear the array
+    inputQueue.length = 0;
+  }
+
   return {
-    inputStates: inputStates,
-    inputQueue: inputQueue
+    setInputTarget: setInputTarget,
+    processInputs: processInputs
   };
 }

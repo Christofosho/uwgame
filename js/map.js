@@ -254,7 +254,7 @@ function MapManager(display, input, gameEvents) {
   // Receives input commands and stores non-repeated commands onto queue
   function handleMoveCommandInput(receivedInput) {
     // ignore repeats
-    if (input.inputStates[receivedInput].repeat) {
+    if (inputHandler.states[receivedInput].repeat) {
       return;
     }
     resetMoveCmdsValidTime();
@@ -272,7 +272,7 @@ function MapManager(display, input, gameEvents) {
     // Add all pressed commands to a queue
     var pressedMoveCmds = [];
     for (var i = 0; i < MOVECOMMANDS.length; i++) {
-      if (input.inputStates[MOVECOMMANDS[i]].pressed) {
+      if (inputHandler.states[MOVECOMMANDS[i]].pressed) {
         pressedMoveCmds.push(MOVECOMMANDS[i]);
       }
     }
@@ -378,31 +378,30 @@ function MapManager(display, input, gameEvents) {
   emptyTileImage.src = "img/empty.png";
 
   // Handle input events to trigger map movement.
-  var inputPressEventHandlers = {};
-  inputPressEventHandlers[INPUT.UP] = function() {
+  var inputHandler = new InputHandler();
+  inputHandler.pressEventHandlers[INPUT.UP] = function() {
     handleMoveCommandInput(INPUT.UP);
   };
-  inputPressEventHandlers[INPUT.DOWN] = function() {
+  inputHandler.pressEventHandlers[INPUT.DOWN] = function() {
     handleMoveCommandInput(INPUT.DOWN);
   };
-  inputPressEventHandlers[INPUT.LEFT] = function() {
+  inputHandler.pressEventHandlers[INPUT.LEFT] = function() {
     handleMoveCommandInput(INPUT.LEFT);
   };
-  inputPressEventHandlers[INPUT.RIGHT] = function() {
+  inputHandler.pressEventHandlers[INPUT.RIGHT] = function() {
     handleMoveCommandInput(INPUT.RIGHT);
   };
 
-  var inputUnpressEventHandlers = {};
-  inputUnpressEventHandlers[INPUT.UP] = function() {
+  inputHandler.releaseEventHandlers[INPUT.UP] = function() {
     resetMoveCmdsValidTime();
   };
-  inputUnpressEventHandlers[INPUT.DOWN] = function() {
+  inputHandler.releaseEventHandlers[INPUT.DOWN] = function() {
     resetMoveCmdsValidTime();
   };
-  inputUnpressEventHandlers[INPUT.LEFT] = function() {
+  inputHandler.releaseEventHandlers[INPUT.LEFT] = function() {
     resetMoveCmdsValidTime();
   };
-  inputUnpressEventHandlers[INPUT.RIGHT] = function() {
+  inputHandler.releaseEventHandlers[INPUT.RIGHT] = function() {
     resetMoveCmdsValidTime();
   };
 
@@ -411,8 +410,7 @@ function MapManager(display, input, gameEvents) {
   return {
     loadMap: loadMap,
     loadView: loadView,
-    inputPressEventHandlers: inputPressEventHandlers,
-    inputUnpressEventHandlers: inputUnpressEventHandlers,
+    inputHandler: inputHandler,
     getPlayerPosition: getPlayerPosition,
     update: update
   };
