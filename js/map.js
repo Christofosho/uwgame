@@ -252,13 +252,16 @@ function MapManager(display, input, gameEvents) {
   }
 
   // Receives input commands and stores non-repeated commands onto queue
-  function handleMoveCommandInput(receivedInput) {
+  function handleMoveCommandInput(event) {
     // ignore repeats
-    if (input.inputStates[receivedInput].repeat) {
+    if (event.repeat) {
       return;
     }
     resetMoveCmdsValidTime();
-    moveCmdQueue.push(receivedInput);
+    if (!event.press) {
+      return;
+    }
+    moveCmdQueue.push(event.input);
   }
 
   // If currently not moving, and if commands are valid (not in transition time),
@@ -272,7 +275,7 @@ function MapManager(display, input, gameEvents) {
     // Add all pressed commands to a queue
     var pressedMoveCmds = [];
     for (var i = 0; i < MOVECOMMANDS.length; i++) {
-      if (input.inputStates[MOVECOMMANDS[i]].pressed) {
+      if (inputHandler.states[MOVECOMMANDS[i]].pressed) {
         pressedMoveCmds.push(MOVECOMMANDS[i]);
       }
     }
@@ -343,6 +346,7 @@ function MapManager(display, input, gameEvents) {
         view.y = targetViewPos.y;
         moving = false;
 
+        // Check for continued movement
         checkProcessMoveCmds();
         // If there is no continued movement, reload the background
         if (!moving &&
@@ -378,41 +382,18 @@ function MapManager(display, input, gameEvents) {
   emptyTileImage.src = "img/empty.png";
 
   // Handle input events to trigger map movement.
-  var inputPressEventHandlers = {};
-  inputPressEventHandlers[INPUT.UP] = function() {
-    handleMoveCommandInput(INPUT.UP);
-  };
-  inputPressEventHandlers[INPUT.DOWN] = function() {
-    handleMoveCommandInput(INPUT.DOWN);
-  };
-  inputPressEventHandlers[INPUT.LEFT] = function() {
-    handleMoveCommandInput(INPUT.LEFT);
-  };
-  inputPressEventHandlers[INPUT.RIGHT] = function() {
-    handleMoveCommandInput(INPUT.RIGHT);
-  };
-
-  var inputUnpressEventHandlers = {};
-  inputUnpressEventHandlers[INPUT.UP] = function() {
-    resetMoveCmdsValidTime();
-  };
-  inputUnpressEventHandlers[INPUT.DOWN] = function() {
-    resetMoveCmdsValidTime();
-  };
-  inputUnpressEventHandlers[INPUT.LEFT] = function() {
-    resetMoveCmdsValidTime();
-  };
-  inputUnpressEventHandlers[INPUT.RIGHT] = function() {
-    resetMoveCmdsValidTime();
-  };
+  var inputHandler = new InputHandler();
+  for (var i = 0; i < MOVECOMMANDS.length; i++) {
+    inputHandler.pressEventHandlers[MOVECOMMANDS[i]] = handleMoveCommandInput;
+    inputHandler.releaseEventHandlers[MOVECOMMANDS[i]] = handleMoveCommandInput;
+  }
 
   gameEvents.addEventListener(GAME_EVENT.UPDATE, update);
 
   return {
     loadMap: loadMap,
     loadView: loadView,
-    inputPressEventHandlers: inputPressEventHandlers,
-    inputUnpressEventHandlers: inputUnpressEventHandlers,
+    inputHandler: inputHandler,
     getPlayerPosition: getPlayerPosition,
     update: update
   };

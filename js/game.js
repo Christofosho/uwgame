@@ -4,9 +4,7 @@
 };
 
 function GameManager(display, input) {
-  var menuActive = false;
   var gameEvents = new EventDispatcher();
-  var map = new MapManager(display, input, gameEvents);
   var mainMenu = null;
   var pauseMenu = null;
 
@@ -54,35 +52,22 @@ function GameManager(display, input) {
     mainMenu = menu.menus["main"];
     pauseMenu = menu.menus["pause"];
     menu.openMenu(mainMenu);
-  })
-
-  function processInputs(inputQueue) {
-    for (var i = 0; i < inputQueue.length; i++) {
-      var input = inputQueue[i].input;
-      if (inputQueue[i].press) {
-        if (inputPressEventHandlers[input]) {
-          inputPressEventHandlers[input]();
-        }
-      } else {
-        if (inputUnpressEventHandlers[input]) {
-          inputUnpressEventHandlers[input]();
-        }
-      }
-    }
-    // Clear the array
-    inputQueue.length = 0;
-  }
+  });
 
   // Update the game state given the amount of elapsed time
   function update(time) {
     gameEvents.fireEvent(GAME_EVENT.UPDATE, time);
   }
 
+  var map = new MapManager(display, input, gameEvents);
+  input.setInputTarget(map.inputHandler);
+
+  // Load the outside map
+  map.loadMap("data/UWGmap.json", 272, 160);
+
   var game = {
-    menuActive: menuActive,
     map: map,
     menu: menu,
-    processInputs: processInputs,
     update: update,
     commands: commands,
     gameEvents: gameEvents

@@ -25,7 +25,7 @@ function UWGApplication() {
   // it at variable intervals.
   function gameLoop() {
     // Process any inputs that have been received since the last frame
-    game.processInputs(input.inputQueue);
+    input.processInputs();
     // Tell the game to advance time
     var time = new Date().getTime();
     game.update(time - lastTime);
