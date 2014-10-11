@@ -21,15 +21,17 @@ function UWGApplication() {
 
   var lastTime = new Date().getTime();
 
+  // We use a variable-time game loop because requestAnimationFrame will call
+  // it at variable intervals.
   function gameLoop() {
     // Process any inputs that have been received since the last frame
-    game.processInputs(input.inputQueue);
+    input.processInputs();
     // Tell the game to advance time
     var time = new Date().getTime();
     game.update(time - lastTime);
     lastTime = time;
-    // Prepare everything to be drawn on the screen
-    display.update();
+    // Redraw any layers that have changed
+    display.draw();
     // Run this function again on the next frame
     requestAnimFrame(gameLoop);
   }

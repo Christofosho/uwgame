@@ -18,8 +18,10 @@
 */
 function DisplayManager(stageSizePixels) {
 
-  if (!stageSizePixels)
+  // Set default value
+  if (!stageSizePixels) {
     stageSizePixels = { width: 510, height: 510 };
+  }
 
   function getTilesetSize(tileset) {
     var numRows = Math.floor(tileset.imageheight / tileset.tileheight);
@@ -86,8 +88,30 @@ function DisplayManager(stageSizePixels) {
     return deferred;
   }
 
-  function update() {
-    // TODO: ensure that the correct section of the map is loaded?
+  function draw() {
+    // Check for any layers that need update
+    if (layersToUpdate.backgroundLayer) {
+      backgroundLayer.draw();
+    }
+    if (layersToUpdate.objectLayer) {
+      objectLayer.draw();
+    }
+    if (layersToUpdate.npcLayer) {
+      npcLayer.draw();
+    }
+    if (layersToUpdate.playerLayer) {
+      playerLayer.draw();
+    }
+    if (layersToUpdate.foregroundLayer) {
+      foregroundLayer.draw();
+    }
+    if (layersToUpdate.menuLayer) {
+      menuLayer.draw();
+    }
+    // Set all to false
+    for (var i in layersToUpdate) {
+      layersToUpdate[i] = false;
+    }
   }
 
   var stage = new Kinetic.Stage({
@@ -115,6 +139,15 @@ function DisplayManager(stageSizePixels) {
   });
   playerLayer.add( rect );
 
+  var layersToUpdate = {
+    backgroundLayer: false,
+    objectLayer: false,
+    npcLayer: false,
+    playerLayer: false,
+    foregroundLayer: false,
+    menuLayer: false
+  };
+
   stage.add(backgroundLayer)
     .add(objectLayer)
     .add(npcLayer)
@@ -123,14 +156,20 @@ function DisplayManager(stageSizePixels) {
     .add(menuLayer);
 
   return {
-    loadTileSets: loadTileSets,
+    // Variables
     stageSizePixels: stageSizePixels,
+
     backgroundLayer: backgroundLayer,
     objectLayer: objectLayer,
     npcLayer: npcLayer,
     playerLayer: playerLayer,
-    menuLayer: menuLayer,
-    update: update,
     foregroundLayer: foregroundLayer,
+    menuLayer: menuLayer,
+
+    layersToUpdate: layersToUpdate,
+
+    // Functions
+    loadTileSets: loadTileSets,
+    draw: draw
   };
 }
