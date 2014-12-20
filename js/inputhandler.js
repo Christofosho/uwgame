@@ -1,4 +1,6 @@
-﻿function InputHandler() {
+﻿// inputhandler.js: small module to handle batch inputs
+
+function InputHandler() {
   var inputHandler = {
     // Event handlers that are triggered when the input is pressed
     pressEventHandlers: {},

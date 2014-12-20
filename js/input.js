@@ -1,4 +1,6 @@
 // input.js: User Input Manager
+// handles all keyboard input and mouse input states
+
 function InputManager() {
 
   /* ============================== VARIABLES =============================== */

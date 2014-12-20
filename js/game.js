@@ -1,4 +1,6 @@
-﻿var GAME_EVENT = {
+﻿// game.js:  handles the game events
+
+var GAME_EVENT = {
   UPDATE: "update",
   MAP_UPDATE: "mapUpdate"
 };

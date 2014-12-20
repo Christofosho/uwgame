@@ -1,3 +1,5 @@
+// application.js: handles the frames and managers
+
 window.requestAnimFrame = 
   window.requestAnimationFrame       ||
   window.webkitRequestAnimationFrame ||

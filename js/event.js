@@ -1,4 +1,6 @@
-﻿function EventDispatcher() {
+﻿// event.js: Event Manager
+
+function EventDispatcher() {
   var listeners = {};
   
   function addEventListener(event, listener) {

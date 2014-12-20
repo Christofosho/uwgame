@@ -1,4 +1,5 @@
 // map.js: Map Manager
+
 function MapManager(display, input, gameEvents) {
   /*============================= VARIABLES ==================================*/
 
