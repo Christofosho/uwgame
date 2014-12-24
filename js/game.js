@@ -1,4 +1,4 @@
-﻿// game.js:  handles the game events
+// game.js: handles the game events
 
 var GAME_EVENT = {
   UPDATE: "update",
@@ -17,7 +17,10 @@ function GameManager(display, input) {
   input.setInputTarget(map.inputHandler);
 
   // Load the outside map
+  // TODO: Custom coordinates
   map.loadMap("data/UWGmap.json", 272, 160);
+
+  player.draw();
 
   return {
     map: map,
